@@ -5,16 +5,17 @@ extern crate random_access_storage as random_access;
 use failure::Error;
 use std::path;
 use std::fs;
+use std::io::{Read, Seek, SeekFrom, Write};
 
 /// Main constructor.
 pub struct Sync {}
 
 impl Sync {
   /// Create a new instance.
-  pub fn new(filename: path::PathBuf) -> random_access::Sync<SyncMethods> {
+  pub fn new(filename: String) -> random_access::Sync<SyncMethods> {
     random_access::Sync::new(SyncMethods {
-      filename: filename,
-      fd: None,
+      filename: path::PathBuf::from(filename),
+      file: None,
     })
   }
 }
@@ -24,30 +25,35 @@ impl Sync {
 /// internals.
 pub struct SyncMethods {
   pub filename: path::PathBuf,
-  pub fd: Option<fs::File>,
+  pub file: Option<fs::File>,
 }
 
 impl random_access::SyncMethods for SyncMethods {
   fn open(&mut self) -> Result<(), Error> {
     if let &Some(dirname) = &self.filename.parent() {
-      mkdirp::mkdirp(&self.filename)?;
+      mkdirp::mkdirp(&dirname)?;
     }
 
-    let fd = fs::File::open(&self.filename)?;
-    self.fd = Some(fd);
+    self.file = Some(fs::File::open(&self.filename)?);
     Ok(())
   }
 
   fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), Error> {
-    let fd = self.fd.as_ref().expect("No fd found.");
+    let mut file = self.file.as_ref().expect("self.file was None.");
+    file.seek(SeekFrom::Start(offset as u64))?;
+    file.write_all(&data)?;
     Ok(())
   }
 
   fn read(&mut self, offset: usize, length: usize) -> Result<Vec<u8>, Error> {
-    Ok(b"sup".to_vec())
+    let mut file = self.file.as_ref().expect("self.file was None.");
+    let mut buffer = Vec::with_capacity(length);
+    file.seek(SeekFrom::Start(offset as u64))?;
+    file.read(&mut buffer[..])?;
+    Ok(buffer)
   }
 
-  fn del(&mut self, offset: usize, length: usize) -> Result<(), Error> {
-    Ok(())
+  fn del(&mut self, _offset: usize, _length: usize) -> Result<(), Error> {
+    panic!("Not implemented yet");
   }
 }
