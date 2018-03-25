@@ -54,6 +54,11 @@ version = "0.2.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "mkdirp"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "quote"
 version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -63,6 +68,7 @@ name = "random-access-disk"
 version = "0.0.1"
 dependencies = [
  "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mkdirp 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "random-access-storage 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -138,6 +144,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "934799b6c1de475a012a02dab0ace1ace43789ee4b99bcfbf1a2e3e8ced5de82"
 "checksum failure_derive 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "c7cdda555bb90c9bb67a3b670a0f42de8e73f5981524123ad8578aafec8ddb8b"
 "checksum libc 0.2.39 (registry+https://github.com/rust-lang/crates.io-index)" = "f54263ad99207254cf58b5f701ecb432c717445ea2ee8af387334bdd1a03fdff"
+"checksum mkdirp 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9796ba90f2e7187d7837ea05033ed6dff5320cbf2944fe2dc1da53569396ca07"
 "checksum quote 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)" = "7a6e920b65c65f10b2ae65c831a81a073a89edd28c7cce89475bff467ab4167a"
 "checksum random-access-storage 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2d725f5fbfbec619b15fedebca2a57fc7fd529f32fd49d93f8d6bbcb6d698112"
 "checksum rustc-demangle 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "11fb43a206a04116ffd7cfcf9bcb941f8eb6cc7ff667272246b0a1c74259a3cb"

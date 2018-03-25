@@ -10,3 +10,4 @@ authors = ["Yoshua Wuyts <yoshuawuyts@gmail.com>"]
 [dependencies]
 failure = "0.1.1"
 random-access-storage = "0.3.0"
+mkdirp = "0.1.0"
