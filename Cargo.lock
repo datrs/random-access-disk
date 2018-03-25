@@ -94,7 +94,7 @@ dependencies = [
 
 [[package]]
 name = "random-access-disk"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "mkdirp 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
