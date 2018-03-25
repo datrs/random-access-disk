@@ -13,9 +13,9 @@ pub struct Sync {}
 
 impl Sync {
   /// Create a new instance.
-  pub fn new(filename: String) -> random_access::Sync<SyncMethods> {
+  pub fn new(filename: path::PathBuf) -> random_access::Sync<SyncMethods> {
     random_access::Sync::new(SyncMethods {
-      filename: path::PathBuf::from(filename),
+      filename: filename,
       file: None,
     })
   }

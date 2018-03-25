@@ -7,15 +7,13 @@ mod sync {
   #[test]
   fn can_call_new() {
     let dir = TempDir::new("random-access-disk").unwrap();
-    let db = dir.path().join("1.db").to_string_lossy().to_string();
-    let _file = rad::Sync::new(db);
+    let _file = rad::Sync::new(dir.path().join("1.db"));
   }
 
   #[test]
   fn can_open_buffer() {
     let dir = TempDir::new("random-access-disk").unwrap();
-    let db = dir.path().join("2.db").to_string_lossy().to_string();
-    let mut file = rad::Sync::new(db);
+    let mut file = rad::Sync::new(dir.path().join("2.db"));
     file.write(0, b"hello").unwrap();
     assert!(file.opened);
   }
@@ -23,8 +21,7 @@ mod sync {
   #[test]
   fn can_write() {
     let dir = TempDir::new("random-access-disk").unwrap();
-    let db = dir.path().join("3.db").to_string_lossy().to_string();
-    let mut file = rad::Sync::new(db);
+    let mut file = rad::Sync::new(dir.path().join("3.db"));
     file.write(0, b"hello").unwrap();
     file.write(5, b" world").unwrap();
   }
@@ -32,8 +29,7 @@ mod sync {
   #[test]
   fn can_read() {
     let dir = TempDir::new("random-access-disk").unwrap();
-    let db = dir.path().join("4.db").to_string_lossy().to_string();
-    let mut file = rad::Sync::new(db);
+    let mut file = rad::Sync::new(dir.path().join("4.db"));
     file.write(0, b"hello").unwrap();
     file.write(5, b" world").unwrap();
     let text = file.read(0, 11).unwrap();
