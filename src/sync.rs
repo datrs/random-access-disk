@@ -34,27 +34,30 @@ impl random_access::SyncMethods for SyncMethods {
     if let &Some(dirname) = &self.filename.parent() {
       mkdirp::mkdirp(&dirname)?;
     }
-    let file = OpenOptions::new()
-      .write(true)
-      .read(true)
+    self.file = Some(OpenOptions::new()
       .create_new(true)
-      .open(&self.filename)?;
-    self.file = Some(file);
+      .read(true)
+      .write(true)
+      .open(&self.filename)?);
     Ok(())
   }
 
   fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), Error> {
     let mut file = self.file.as_ref().expect("self.file was None.");
     file.seek(SeekFrom::Start(offset as u64))?;
-    file.write_all(&data)?;
+    file.write(&data)?;
     Ok(())
   }
 
   fn read(&mut self, offset: usize, length: usize) -> Result<Vec<u8>, Error> {
     let mut file = self.file.as_ref().expect("self.file was None.");
     let mut buffer = Vec::with_capacity(length);
+    for _ in 0..length {
+      buffer.push(0);
+    }
     file.seek(SeekFrom::Start(offset as u64))?;
     file.read(&mut buffer[..])?;
+    println!("{:?}", offset);
     Ok(buffer)
   }
 
