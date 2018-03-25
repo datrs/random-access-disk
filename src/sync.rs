@@ -2,15 +2,16 @@ extern crate failure;
 extern crate mkdirp;
 extern crate random_access_storage as random_access;
 
+use std::fs;
 use failure::Error;
-use std::path::Path;
+use std::path;
 
 /// Main constructor.
 pub struct Sync {}
 
 impl Sync {
   /// Create a new instance.
-  pub fn new<'f>(filename: &'f Path) -> random_access::Sync<SyncMethods> {
+  pub fn new<'f>(filename: &'f path::Path) -> random_access::Sync<SyncMethods> {
     let methods = SyncMethods { filename: filename };
 
     random_access::Sync::new(methods)
@@ -21,12 +22,17 @@ impl Sync {
 /// These should generally be kept private, but exposed to prevent leaking
 /// internals.
 pub struct SyncMethods<'f> {
-  pub filename: &'f Path,
+  pub filename: &'f path::Path,
+  pub fd: fs::File,
 }
 
 impl<'f> random_access::SyncMethods for SyncMethods<'f> {
   fn open(&mut self) -> Result<(), Error> {
-    mkdirp::mkdirp(&self.filename);
+    if let Some(dirname) = &self.filename.parent() {
+      mkdirp::mkdirp(&self.filename)?;
+    }
+    let fd = fs::open(&self.filename)?;
+    self.fd = fd;
     Ok(())
   }
 
