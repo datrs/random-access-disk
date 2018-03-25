@@ -32,12 +32,14 @@ impl random_access::SyncMethods for SyncMethods {
     if let &Some(dirname) = &self.filename.parent() {
       mkdirp::mkdirp(&self.filename)?;
     }
+
     let fd = fs::File::open(&self.filename)?;
     self.fd = Some(fd);
     Ok(())
   }
 
   fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), Error> {
+    let fd = self.fd.as_ref().expect("No fd found.");
     Ok(())
   }
 
