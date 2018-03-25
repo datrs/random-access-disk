@@ -11,7 +11,7 @@ pub struct Sync {}
 
 impl Sync {
   /// Create a new instance.
-  pub fn new<'f>(filename: &'f path::Path) -> random_access::Sync<SyncMethods> {
+  pub fn new(filename: path::PathBuf) -> random_access::Sync<SyncMethods> {
     random_access::Sync::new(SyncMethods {
       filename: filename,
       fd: None,
@@ -22,12 +22,12 @@ impl Sync {
 /// Methods that have been implemented to provide synchronous access to disk.  .
 /// These should generally be kept private, but exposed to prevent leaking
 /// internals.
-pub struct SyncMethods<'f> {
-  pub filename: &'f path::Path,
+pub struct SyncMethods {
+  pub filename: path::PathBuf,
   pub fd: Option<fs::File>,
 }
 
-impl<'f> random_access::SyncMethods for SyncMethods<'f> {
+impl random_access::SyncMethods for SyncMethods {
   fn open(&mut self) -> Result<(), Error> {
     if let &Some(dirname) = &self.filename.parent() {
       mkdirp::mkdirp(&self.filename)?;
