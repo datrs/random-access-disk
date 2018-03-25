@@ -5,6 +5,7 @@ extern crate random_access_storage as random_access;
 use failure::Error;
 use std::path;
 use std::fs;
+use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom, Write};
 
 /// Main constructor.
@@ -33,8 +34,12 @@ impl random_access::SyncMethods for SyncMethods {
     if let &Some(dirname) = &self.filename.parent() {
       mkdirp::mkdirp(&dirname)?;
     }
-
-    self.file = Some(fs::File::open(&self.filename)?);
+    let file = OpenOptions::new()
+      .write(true)
+      .read(true)
+      .create_new(true)
+      .open(&self.filename)?;
+    self.file = Some(file);
     Ok(())
   }
 
