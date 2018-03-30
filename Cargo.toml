@@ -1,7 +1,7 @@
 [package]
 name = "random-access-disk"
 version = "0.1.1"
-license = "Apache-2.0"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/datrs/random-access-disk"
 documentation = "https://docs.rs/random-access-disk"
 description = "Continuously read,write to disk, using random offsets and lengths"

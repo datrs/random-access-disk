@@ -14,7 +14,7 @@ $ cargo add random-access-disk
 ```
 
 ## License
-[Apache-2.0](./LICENSE)
+[MIT](./LICENSE-MIT) OR [Apache-2.0](./LICENSE-APACHE)
 
 [1]: https://img.shields.io/crates/v/random-access-disk.svg?style=flat-square
 [2]: https://crates.io/crate/random-access-disk
