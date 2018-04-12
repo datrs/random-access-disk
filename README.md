@@ -8,6 +8,25 @@ Continuously read,write to disk, using random offsets and lengths. Adapted from
 - [Documentation][8]
 - [Crate][2]
 
+## Usage
+```rust
+extern crate failure;
+extern crate tempdir;
+use failure::Error;
+extern crate tempdir;
+extern crate random_access_disk;
+
+use std::path::PathBuf;
+use tempdir::TempDir;
+
+let dir = TempDir::new("random-access-disk").unwrap();
+let mut file = random_access_disk::Sync::new(PathBuf::from("./file.log"));
+
+file.write(0, b"hello").unwrap();
+file.write(5, b" world").unwrap();
+let _text = file.read(0, 11).unwrap();
+```
+
 ## Installation
 ```sh
 $ cargo add random-access-disk

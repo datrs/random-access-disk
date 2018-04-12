@@ -13,9 +13,10 @@ pub struct Sync {}
 
 impl Sync {
   /// Create a new instance.
+  #[cfg_attr(test, allow(new_ret_no_self))]
   pub fn new(filename: path::PathBuf) -> random_access::Sync<SyncMethods> {
     random_access::Sync::new(SyncMethods {
-      filename: filename,
+      filename,
       file: None,
       length: 0,
     })
@@ -26,14 +27,14 @@ impl Sync {
 /// These should generally be kept private, but exposed to prevent leaking
 /// internals.
 pub struct SyncMethods {
-  pub filename: path::PathBuf,
-  pub file: Option<fs::File>,
+  filename: path::PathBuf,
+  file: Option<fs::File>,
   length: u64,
 }
 
 impl random_access::SyncMethods for SyncMethods {
   fn open(&mut self) -> Result<(), Error> {
-    if let &Some(dirname) = &self.filename.parent() {
+    if let Some(dirname) = self.filename.parent() {
       mkdirp::mkdirp(&dirname)?;
     }
 
@@ -51,7 +52,7 @@ impl random_access::SyncMethods for SyncMethods {
   fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), Error> {
     let mut file = self.file.as_ref().expect("self.file was None.");
     file.seek(SeekFrom::Start(offset as u64))?;
-    file.write(&data)?;
+    file.write_all(&data)?;
 
     // We've changed the length of our file.
     let new_len = (offset + data.len()) as u64;
