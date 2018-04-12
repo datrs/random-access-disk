@@ -63,6 +63,14 @@ impl random_access::SyncMethods for SyncMethods {
     Ok(())
   }
 
+  // NOTE(yw): disabling clippy here because we files on disk might be sparse,
+  // and sometimes you might want to read a bit of memory to check if it's
+  // formatted or not. Returning zero'd out memory seems like an OK thing to do.
+  // We should probably come back to this at a future point, and determine
+  // whether it's okay to return a fully zero'd out slice. It's a bit weird,
+  // because we're replacing empty data with actual zeroes - which does not
+  // reflect the state of the world.
+  #[cfg_attr(test, allow(unused_io_amount))]
   fn read(&mut self, offset: usize, length: usize) -> Result<Vec<u8>, Error> {
     ensure!(
       (offset + length) as u64 <= self.length,
@@ -72,7 +80,6 @@ impl random_access::SyncMethods for SyncMethods {
     let mut buffer = vec![0; length];
     file.seek(SeekFrom::Start(offset as u64))?;
     file.read(&mut buffer[..])?;
-    println!("{:?}", offset);
     Ok(buffer)
   }
 
