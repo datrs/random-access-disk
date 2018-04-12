@@ -43,10 +43,14 @@ quickcheck! {
       match op {
         Read { offset, length } => {
           let end = offset + length;
-          assert_eq!(
-            &*implementation.read(offset, length).expect("Reads should be successful."),
-            &model[offset..end]
-          );
+          if model.len() >= end {
+            assert_eq!(
+              &*implementation.read(offset, length).expect("Reads should be successful."),
+              &model[offset..end]
+            );
+          } else {
+            assert!(implementation.read(offset, length).is_err());
+          }
         },
         Write { offset, ref data } => {
           let end = offset + data.len();

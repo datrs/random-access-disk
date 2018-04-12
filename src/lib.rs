@@ -26,7 +26,7 @@
 //! # fn main() {}
 //! ```
 
-// #[macro_use]
+#[macro_use]
 extern crate failure;
 
 /// Synchronous implementation.

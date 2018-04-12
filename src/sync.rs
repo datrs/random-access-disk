@@ -3,10 +3,10 @@ extern crate mkdirp;
 extern crate random_access_storage as random_access;
 
 use failure::Error;
-use std::path;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom, Write};
+use std::path;
 
 /// Main constructor.
 pub struct Sync {}
@@ -17,6 +17,7 @@ impl Sync {
     random_access::Sync::new(SyncMethods {
       filename: filename,
       file: None,
+      length: 0,
     })
   }
 }
@@ -27,6 +28,7 @@ impl Sync {
 pub struct SyncMethods {
   pub filename: path::PathBuf,
   pub file: Option<fs::File>,
+  length: u64,
 }
 
 impl random_access::SyncMethods for SyncMethods {
@@ -34,11 +36,15 @@ impl random_access::SyncMethods for SyncMethods {
     if let &Some(dirname) = &self.filename.parent() {
       mkdirp::mkdirp(&dirname)?;
     }
+
     self.file = Some(OpenOptions::new()
       .create_new(true)
       .read(true)
       .write(true)
       .open(&self.filename)?);
+
+    let metadata = fs::metadata(&self.filename)?;
+    self.length = metadata.len();
     Ok(())
   }
 
@@ -46,15 +52,23 @@ impl random_access::SyncMethods for SyncMethods {
     let mut file = self.file.as_ref().expect("self.file was None.");
     file.seek(SeekFrom::Start(offset as u64))?;
     file.write(&data)?;
+
+    // We've changed the length of our file.
+    let new_len = (offset + data.len()) as u64;
+    if new_len > self.length {
+      self.length = new_len;
+    }
+
     Ok(())
   }
 
   fn read(&mut self, offset: usize, length: usize) -> Result<Vec<u8>, Error> {
+    ensure!(
+      (offset + length) as u64 <= self.length,
+      "Could not satisfy length"
+    );
     let mut file = self.file.as_ref().expect("self.file was None.");
-    let mut buffer = Vec::with_capacity(length);
-    for _ in 0..length {
-      buffer.push(0);
-    }
+    let mut buffer = vec![0; length];
     file.seek(SeekFrom::Start(offset as u64))?;
     file.read(&mut buffer[..])?;
     println!("{:?}", offset);
