@@ -6,6 +6,7 @@ use failure::Error;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom, Write};
+use std::ops::Drop;
 use std::path;
 
 /// Main constructor.
@@ -13,7 +14,7 @@ pub struct Sync {}
 
 impl Sync {
   /// Create a new instance.
-  #[cfg_attr(test, allow(new_ret_no_self))]
+  // #[cfg_attr(test, allow(new_ret_no_self))]
   pub fn new(filename: path::PathBuf) -> random_access::Sync<SyncMethods> {
     random_access::Sync::new(SyncMethods {
       filename,
@@ -26,6 +27,7 @@ impl Sync {
 /// Methods that have been implemented to provide synchronous access to disk.  .
 /// These should generally be kept private, but exposed to prevent leaking
 /// internals.
+#[derive(Debug)]
 pub struct SyncMethods {
   filename: path::PathBuf,
   file: Option<fs::File>,
@@ -37,12 +39,14 @@ impl random_access::SyncMethods for SyncMethods {
     if let Some(dirname) = self.filename.parent() {
       mkdirp::mkdirp(&dirname)?;
     }
-
-    self.file = Some(OpenOptions::new()
-      .create_new(true)
+    let file = OpenOptions::new()
+      .create(true)
       .read(true)
       .write(true)
-      .open(&self.filename)?);
+      .open(&self.filename)?;
+    file.sync_all()?;
+
+    self.file = Some(file);
 
     let metadata = fs::metadata(&self.filename)?;
     self.length = metadata.len();
@@ -53,6 +57,7 @@ impl random_access::SyncMethods for SyncMethods {
     let mut file = self.file.as_ref().expect("self.file was None.");
     file.seek(SeekFrom::Start(offset as u64))?;
     file.write_all(&data)?;
+    file.sync_all()?;
 
     // We've changed the length of our file.
     let new_len = (offset + data.len()) as u64;
@@ -70,7 +75,7 @@ impl random_access::SyncMethods for SyncMethods {
   // whether it's okay to return a fully zero'd out slice. It's a bit weird,
   // because we're replacing empty data with actual zeroes - which does not
   // reflect the state of the world.
-  #[cfg_attr(test, allow(unused_io_amount))]
+  // #[cfg_attr(test, allow(unused_io_amount))]
   fn read(&mut self, offset: usize, length: usize) -> Result<Vec<u8>, Error> {
     ensure!(
       (offset + length) as u64 <= self.length,
@@ -85,5 +90,13 @@ impl random_access::SyncMethods for SyncMethods {
 
   fn del(&mut self, _offset: usize, _length: usize) -> Result<(), Error> {
     panic!("Not implemented yet");
+  }
+}
+
+impl Drop for SyncMethods {
+  fn drop(&mut self) {
+    if let Some(file) = &self.file {
+      file.sync_all().unwrap();
+    }
   }
 }
