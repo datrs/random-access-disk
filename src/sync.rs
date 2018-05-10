@@ -10,6 +10,7 @@ use std::ops::Drop;
 use std::path;
 
 /// Main constructor.
+#[derive(Debug)]
 pub struct Sync {}
 
 impl Sync {
