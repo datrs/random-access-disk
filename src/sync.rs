@@ -80,8 +80,10 @@ impl random_access::SyncMethods for SyncMethods {
   fn read(&mut self, offset: usize, length: usize) -> Result<Vec<u8>, Error> {
     ensure!(
       (offset + length) as u64 <= self.length,
-      "Could not satisfy length"
+      format!("Read bounds exceeded. {} < {}..{}",
+              self.length, offset, offset + length)
     );
+
     let mut file = self.file.as_ref().expect("self.file was None.");
     let mut buffer = vec![0; length];
     file.seek(SeekFrom::Start(offset as u64))?;
