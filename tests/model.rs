@@ -36,7 +36,7 @@ impl Arbitrary for Op {
 quickcheck! {
   fn implementation_matches_model(ops: Vec<Op>) -> bool {
     let dir = TempDir::new("random-access-disk").unwrap();
-    let mut implementation = rad::Sync::new(dir.path().join("1.db"));
+    let mut implementation = rad::RandomAccessDisk::new(dir.path().join("1.db"));
     let mut model = vec![];
 
     for op in ops {

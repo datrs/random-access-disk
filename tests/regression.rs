@@ -9,7 +9,7 @@ use std::env;
 // back to `.read()` and disable clippy for that rule specifically.
 fn regress_1() {
   let dir = TempDir::new("random-access-disk").unwrap();
-  let mut file = rad::Sync::new(dir.path().join("regression-1.db"));
+  let mut file = rad::RandomAccessDisk::new(dir.path().join("regression-1.db"));
   file.write(27, b"").unwrap();
   file.read(13, 5).unwrap();
 }
@@ -22,6 +22,6 @@ fn regress_1() {
 fn regress_2() {
   let mut dir = env::temp_dir();
   dir.push("regression-2.db");
-  let mut file = rad::Sync::new(dir);
+  let mut file = rad::RandomAccessDisk::new(dir);
   file.write(27, b"").unwrap();
 }
