@@ -36,6 +36,7 @@ impl Arbitrary for Op {
 quickcheck! {
   fn implementation_matches_model(ops: Vec<Op>) -> bool {
     let dir = TempDir::new("random-access-disk").unwrap();
+
     let mut implementation = rad::RandomAccessDisk::new(dir.path().join("1.db"));
     let mut model = vec![];
 
@@ -45,7 +46,7 @@ quickcheck! {
           let end = offset + length;
           if model.len() >= end {
             assert_eq!(
-              &*implementation.read(offset, length).expect("Reads should be successful."),
+              implementation.read(offset, length).expect("Reads should be successful."),
               &model[offset..end]
             );
           } else {
@@ -57,7 +58,7 @@ quickcheck! {
           if model.len() < end {
             model.resize(end, 0);
           }
-          implementation.write(offset, &*data).expect("Writes should be successful.");
+          implementation.write(offset, data).expect("Writes should be successful.");
           model[offset..end].copy_from_slice(data);
         },
       }
