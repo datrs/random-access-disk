@@ -8,8 +8,8 @@ extern crate failure;
 extern crate mkdirp;
 extern crate random_access_storage;
 
-use random_access_storage::{RandomAccessMethods, RandomAccess};
 use failure::Error;
+use random_access_storage::{RandomAccess, RandomAccessMethods};
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::ops::Drop;
@@ -42,7 +42,8 @@ pub struct RandomAccessDiskMethods {
 }
 
 impl RandomAccessMethods for RandomAccessDiskMethods {
-  fn open(&mut self) -> Result<(), Error> {
+  type Error = Error;
+  fn open(&mut self) -> Result<(), Self::Error> {
     if let Some(dirname) = self.filename.parent() {
       mkdirp::mkdirp(&dirname)?;
     }
@@ -60,7 +61,7 @@ impl RandomAccessMethods for RandomAccessDiskMethods {
     Ok(())
   }
 
-  fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), Error> {
+  fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), Self::Error> {
     let mut file = self.file.as_ref().expect("self.file was None.");
     file.seek(SeekFrom::Start(offset as u64))?;
     file.write_all(&data)?;
@@ -83,21 +84,29 @@ impl RandomAccessMethods for RandomAccessDiskMethods {
   // because we're replacing empty data with actual zeroes - which does not
   // reflect the state of the world.
   // #[cfg_attr(test, allow(unused_io_amount))]
-  fn read(&mut self, offset: usize, length: usize) -> Result<Vec<u8>, Error> {
+  fn read(
+    &mut self,
+    offset: usize,
+    length: usize,
+  ) -> Result<Vec<u8>, Self::Error> {
     ensure!(
       (offset + length) as u64 <= self.length,
-      format!("Read bounds exceeded. {} < {}..{}",
-              self.length, offset, offset + length)
+      format!(
+        "Read bounds exceeded. {} < {}..{}",
+        self.length,
+        offset,
+        offset + length
+      )
     );
 
     let mut file = self.file.as_ref().expect("self.file was None.");
     let mut buffer = vec![0; length];
     file.seek(SeekFrom::Start(offset as u64))?;
-    file.read(&mut buffer[..])?;
+    let _bytes_read = file.read(&mut buffer[..])?;
     Ok(buffer)
   }
 
-  fn del(&mut self, _offset: usize, _length: usize) -> Result<(), Error> {
+  fn del(&mut self, _offset: usize, _length: usize) -> Result<(), Self::Error> {
     panic!("Not implemented yet");
   }
 }
@@ -109,4 +118,3 @@ impl Drop for RandomAccessDiskMethods {
     }
   }
 }
-
