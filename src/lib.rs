@@ -21,7 +21,7 @@ pub struct RandomAccessDisk {}
 
 impl RandomAccessDisk {
   /// Create a new instance.
-  // #[cfg_attr(test, allow(new_ret_no_self))]
+  #[cfg_attr(feature = "cargo-clippy", allow(new_ret_no_self))]
   pub fn new(filename: path::PathBuf) -> RandomAccess<RandomAccessDiskMethods> {
     RandomAccess::new(RandomAccessDiskMethods {
       filename,
