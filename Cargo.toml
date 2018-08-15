@@ -10,7 +10,7 @@ readme = "README.md"
 
 [dependencies]
 failure = "0.1.1"
-random-access-storage = "0.5.0"
+random-access-storage = "0.6.0"
 mkdirp = "0.1.0"
 
 [dev-dependencies]

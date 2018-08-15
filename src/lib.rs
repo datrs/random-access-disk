@@ -9,7 +9,7 @@ extern crate mkdirp;
 extern crate random_access_storage;
 
 use failure::Error;
-use random_access_storage::{RandomAccess, RandomAccessMethods};
+use random_access_storage::RandomAccess;
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::ops::Drop;
@@ -17,49 +17,37 @@ use std::path;
 
 /// Main constructor.
 #[derive(Debug)]
-pub struct RandomAccessDisk {}
-
-impl RandomAccessDisk {
-  /// Create a new instance.
-  #[cfg_attr(feature = "cargo-clippy", allow(new_ret_no_self))]
-  pub fn new(filename: path::PathBuf) -> RandomAccess<RandomAccessDiskMethods> {
-    RandomAccess::new(RandomAccessDiskMethods {
-      filename,
-      file: None,
-      length: 0,
-    })
-  }
-}
-
-/// Methods that have been implemented to provide synchronous access to disk.  .
-/// These should generally be kept private, but exposed to prevent leaking
-/// internals.
-#[derive(Debug)]
-pub struct RandomAccessDiskMethods {
+pub struct RandomAccessDisk {
   filename: path::PathBuf,
   file: Option<fs::File>,
   length: u64,
 }
 
-impl RandomAccessMethods for RandomAccessDiskMethods {
-  type Error = Error;
-  fn open(&mut self) -> Result<(), Self::Error> {
-    if let Some(dirname) = self.filename.parent() {
+impl RandomAccessDisk {
+  /// Create a new instance.
+  #[cfg_attr(feature = "cargo-clippy", allow(new_ret_no_self))]
+  pub fn open(filename: path::PathBuf) -> Result<RandomAccessDisk, Error> {
+    if let Some(dirname) = filename.parent() {
       mkdirp::mkdirp(&dirname)?;
     }
     let file = OpenOptions::new()
       .create(true)
       .read(true)
       .write(true)
-      .open(&self.filename)?;
+      .open(&filename)?;
     file.sync_all()?;
 
-    self.file = Some(file);
-
-    let metadata = fs::metadata(&self.filename)?;
-    self.length = metadata.len();
-    Ok(())
+    let metadata = filename.metadata()?;
+    Ok(RandomAccessDisk {
+      filename,
+      file: Some(file),
+      length: metadata.len(),
+    })
   }
+}
+
+impl RandomAccess for RandomAccessDisk {
+  type Error = Error;
 
   fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), Self::Error> {
     let mut file = self.file.as_ref().expect("self.file was None.");
@@ -106,12 +94,21 @@ impl RandomAccessMethods for RandomAccessDiskMethods {
     Ok(buffer)
   }
 
+  fn read_to_writer(
+    &mut self,
+    _offset: usize,
+    _length: usize,
+    _buf: &mut impl Write,
+  ) -> Result<(), Self::Error> {
+    unimplemented!()
+  }
+
   fn del(&mut self, _offset: usize, _length: usize) -> Result<(), Self::Error> {
     panic!("Not implemented yet");
   }
 }
 
-impl Drop for RandomAccessDiskMethods {
+impl Drop for RandomAccessDisk {
   fn drop(&mut self) {
     if let Some(file) = &self.file {
       file.sync_all().unwrap();
