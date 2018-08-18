@@ -5,13 +5,19 @@ use tempfile::Builder;
 
 #[test]
 fn can_call_new() {
-  let dir = Builder::new().prefix("random-access-disk").tempdir().unwrap();
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
   let _file = rad::RandomAccessDisk::new(dir.path().join("1.db"));
 }
 
 #[test]
 fn can_open_buffer() {
-  let dir = Builder::new().prefix("random-access-disk").tempdir().unwrap();
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
   let mut file = rad::RandomAccessDisk::new(dir.path().join("2.db"));
   file.write(0, b"hello").unwrap();
   assert!(file.opened);
@@ -19,7 +25,10 @@ fn can_open_buffer() {
 
 #[test]
 fn can_write() {
-  let dir = Builder::new().prefix("random-access-disk").tempdir().unwrap();
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
   let mut file = rad::RandomAccessDisk::new(dir.path().join("3.db"));
   file.write(0, b"hello").unwrap();
   file.write(5, b" world").unwrap();
@@ -27,7 +36,10 @@ fn can_write() {
 
 #[test]
 fn can_read() {
-  let dir = Builder::new().prefix("random-access-disk").tempdir().unwrap();
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
   let mut file = rad::RandomAccessDisk::new(dir.path().join("4.db"));
   file.write(0, b"hello").unwrap();
   file.write(5, b" world").unwrap();

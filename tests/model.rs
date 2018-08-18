@@ -3,10 +3,10 @@ extern crate quickcheck;
 extern crate random_access_disk as rad;
 extern crate tempfile;
 
-use tempfile::Builder;
 use self::Op::*;
 use quickcheck::{Arbitrary, Gen};
 use std::u8;
+use tempfile::Builder;
 
 const MAX_FILE_SIZE: usize = 5 * 10; // 5mb
 
