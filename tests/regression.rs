@@ -1,6 +1,8 @@
 extern crate random_access_disk as rad;
+extern crate random_access_storage;
 extern crate tempfile;
 
+use random_access_storage::RandomAccess;
 use std::env;
 use tempfile::Builder;
 
@@ -12,7 +14,8 @@ fn regress_1() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::new(dir.path().join("regression-1.db"));
+  let mut file =
+    rad::RandomAccessDisk::open(dir.path().join("regression-1.db")).unwrap();
   file.write(27, b"").unwrap();
   file.read(13, 5).unwrap();
 }
@@ -25,6 +28,6 @@ fn regress_1() {
 fn regress_2() {
   let mut dir = env::temp_dir();
   dir.push("regression-2.db");
-  let mut file = rad::RandomAccessDisk::new(dir);
+  let mut file = rad::RandomAccessDisk::open(dir).unwrap();
   file.write(27, b"").unwrap();
 }

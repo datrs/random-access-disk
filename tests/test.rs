@@ -1,6 +1,8 @@
 extern crate random_access_disk as rad;
+extern crate random_access_storage;
 extern crate tempfile;
 
+use random_access_storage::RandomAccess;
 use tempfile::Builder;
 
 #[test]
@@ -9,7 +11,7 @@ fn can_call_new() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let _file = rad::RandomAccessDisk::new(dir.path().join("1.db"));
+  let _file = rad::RandomAccessDisk::open(dir.path().join("1.db")).unwrap();
 }
 
 #[test]
@@ -18,9 +20,8 @@ fn can_open_buffer() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::new(dir.path().join("2.db"));
+  let mut file = rad::RandomAccessDisk::open(dir.path().join("2.db")).unwrap();
   file.write(0, b"hello").unwrap();
-  assert!(file.opened);
 }
 
 #[test]
@@ -29,7 +30,7 @@ fn can_write() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::new(dir.path().join("3.db"));
+  let mut file = rad::RandomAccessDisk::open(dir.path().join("3.db")).unwrap();
   file.write(0, b"hello").unwrap();
   file.write(5, b" world").unwrap();
 }
@@ -40,7 +41,7 @@ fn can_read() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::new(dir.path().join("4.db"));
+  let mut file = rad::RandomAccessDisk::open(dir.path().join("4.db")).unwrap();
   file.write(0, b"hello").unwrap();
   file.write(5, b" world").unwrap();
   let text = file.read(0, 11).unwrap();

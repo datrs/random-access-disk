@@ -1,10 +1,12 @@
 #[macro_use]
 extern crate quickcheck;
 extern crate random_access_disk as rad;
+extern crate random_access_storage;
 extern crate tempfile;
 
 use self::Op::*;
 use quickcheck::{Arbitrary, Gen};
+use random_access_storage::RandomAccess;
 use std::u8;
 use tempfile::Builder;
 
@@ -37,7 +39,7 @@ quickcheck! {
   fn implementation_matches_model(ops: Vec<Op>) -> bool {
     let dir = Builder::new().prefix("random-access-disk").tempdir().unwrap();
 
-    let mut implementation = rad::RandomAccessDisk::new(dir.path().join("1.db"));
+    let mut implementation = rad::RandomAccessDisk::open(dir.path().join("1.db")).unwrap();
     let mut model = vec![];
 
     for op in ops {
