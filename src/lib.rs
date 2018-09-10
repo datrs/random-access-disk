@@ -2,6 +2,7 @@
 #![cfg_attr(feature = "nightly", feature(external_doc))]
 #![cfg_attr(feature = "nightly", doc(include = "../README.md"))]
 #![cfg_attr(test, deny(warnings))]
+#![feature(tool_lints)]
 
 #[macro_use]
 extern crate failure;
@@ -25,7 +26,7 @@ pub struct RandomAccessDisk {
 
 impl RandomAccessDisk {
   /// Create a new instance.
-  #[cfg_attr(feature = "cargo-clippy", allow(new_ret_no_self))]
+  #[allow(clippy::new_ret_no_self)]
   pub fn open(filename: path::PathBuf) -> Result<RandomAccessDisk, Error> {
     if let Some(dirname) = filename.parent() {
       mkdirp::mkdirp(&dirname)?;
