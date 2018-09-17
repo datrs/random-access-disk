@@ -16,3 +16,4 @@ mkdirp = "0.1.0"
 [dev-dependencies]
 quickcheck = "0.7.1"
 tempfile = "3.0.3"
+rand = "0.5.5"
