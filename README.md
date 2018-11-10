@@ -10,18 +10,31 @@ Continuously read,write to disk, using random offsets and lengths. Adapted from
 
 ## Usage
 ```rust
-extern crate tempdir;
+extern crate random_access_storage;
 extern crate random_access_disk;
+extern crate tempfile;
+extern crate failure;
 
-use std::path::PathBuf;
-use tempdir::TempDir;
+use random_access_disk::RandomAccessDisk;
+use random_access_storage::RandomAccess;
+use tempfile::Builder;
+use failure::Error;
 
-let dir = TempDir::new("random-access-disk").unwrap();
-let mut file = random_access_disk::RandomAccessDisk::new(dir.path().join("README.db"));
+fn main () -> Result<(), Error>{
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()?;
 
-file.write(0, b"hello").unwrap();
-file.write(5, b" world").unwrap();
-let _text = file.read(0, 11).unwrap();
+  let file = dir.path().join("example.db");
+  let mut file = RandomAccessDisk::open(file)?;
+
+  file.write(0, b"hello")?;
+  file.write(5, b" world")?;
+
+  let text = file.read(0, 11)?;
+  assert_eq!(&text, b"hello world");
+  Ok(())
+}
 ```
 
 ## Installation

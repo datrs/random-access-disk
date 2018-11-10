@@ -1,8 +1,37 @@
-#![cfg_attr(feature = "nightly", deny(missing_docs))]
-#![cfg_attr(feature = "nightly", feature(external_doc))]
-#![cfg_attr(feature = "nightly", doc(include = "../README.md"))]
+#![forbid(unsafe_code, bad_style, future_incompatible)]
+#![forbid(rust_2018_idioms, rust_2018_compatibility)]
+#![deny(missing_debug_implementations)]
+#![forbid(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
 #![feature(tool_lints)]
+
+//! # Example
+//! __Basic usage__
+//!  ```rust
+//! # extern crate random_access_storage;
+//! # extern crate random_access_disk;
+//! # extern crate tempfile;
+//! # extern crate failure;
+//! use random_access_disk::RandomAccessDisk;
+//! use random_access_storage::RandomAccess;
+//! use tempfile::Builder;
+//! # use failure::Error;
+//!
+//! # fn main () -> Result<(), Error>{
+//! let dir = Builder::new()
+//!   .prefix("random-access-disk")
+//!   .tempdir()?;
+//!
+//! let file = dir.path().join("example.db");
+//! let mut file = RandomAccessDisk::open(file)?;
+//!
+//! file.write(0, b"hello")?;
+//! file.write(5, b" world")?;
+//!
+//! let text = file.read(0, 11)?;
+//! assert_eq!(&text, b"hello world");
+//! # Ok(())}
+//! ```
 
 #[macro_use]
 extern crate failure;
