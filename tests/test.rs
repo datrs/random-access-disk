@@ -3,8 +3,8 @@ extern crate random_access_storage;
 extern crate tempfile;
 
 use random_access_storage::RandomAccess;
-use tempfile::Builder;
 use std::io::Read;
+use tempfile::Builder;
 
 #[test]
 fn can_call_new() {
@@ -82,7 +82,10 @@ fn can_truncate_gt() {
   file.write(5, b" world").unwrap();
   file.truncate(15).unwrap();
   let text = file.read(0, 15).unwrap();
-  assert_eq!(String::from_utf8(text.to_vec()).unwrap(), "hello world\0\0\0\0");
+  assert_eq!(
+    String::from_utf8(text.to_vec()).unwrap(),
+    "hello world\0\0\0\0"
+  );
   match file.read(0, 16) {
     Ok(_) => panic!("file is too big. read past the end should have failed"),
     _ => {}
