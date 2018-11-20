@@ -106,6 +106,14 @@ impl RandomAccess for RandomAccessDisk {
   fn del(&mut self, _offset: usize, _length: usize) -> Result<(), Self::Error> {
     panic!("Not implemented yet");
   }
+
+  fn truncate(&mut self, length: usize) -> Result<(), Self::Error> {
+    let file = self.file.as_ref().expect("self.file was None.");
+    self.length = length as u64;
+    file.set_len(self.length)?;
+    file.sync_all()?;
+    Ok(())
+  }
 }
 
 impl Drop for RandomAccessDisk {
