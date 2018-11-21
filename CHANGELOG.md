@@ -1,3 +1,25 @@
+## 2018-11-21, Version 0.7.0
+### Commits
+- [[`9059d4f552`](https://github.com/datrs/random-access-disk/commit/9059d4f5524f16f52badff98a92e4b7db308a2d0)] (cargo-release) version 0.7.0 (Yoshua Wuyts)
+- [[`791e3fd8ee`](https://github.com/datrs/random-access-disk/commit/791e3fd8ee1fd7af387119e734fd498074fc8c33)] update travis (Yoshua Wuyts)
+- [[`4e33df9813`](https://github.com/datrs/random-access-disk/commit/4e33df981357474f1e986e3fef63f5b4397efad0)] truncate implementation with tests (#18) (James Halliday)
+- [[`4098c2d35d`](https://github.com/datrs/random-access-disk/commit/4098c2d35dd570d635a890656925ae898e8e9e05)] Update rand requirement from 0.5.5 to 0.6.0 (#17) (dependabot[bot])
+- [[`9083d3cfb0`](https://github.com/datrs/random-access-disk/commit/9083d3cfb08069541a146f7e12e6af06c97354c0)] Update quickcheck requirement from 0.6.2 to 0.7.1 (#15) (dependabot[bot])
+- [[`928fe1afaf`](https://github.com/datrs/random-access-disk/commit/928fe1afaf95453a00bb7754bb7ff91e08fe5689)] Run clippy on travis (#14) (Szabolcs Berecz)
+- [[`07fa83dd28`](https://github.com/datrs/random-access-disk/commit/07fa83dd2882d0b6868378e7a9599572693e035e)] update changelog (Yoshua Wuyts)
+
+### Stats
+```diff
+ .travis.yml    | 23 ++++++++++---------
+ CHANGELOG.md   | 21 ++++++++++++++++++-
+ Cargo.toml     | 11 ++++-----
+ src/lib.rs     | 10 +++++++-
+ tests/model.rs |  2 ++-
+ tests/test.rs  | 70 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-
+ 6 files changed, 121 insertions(+), 16 deletions(-)
+```
+
+
 ## 2018-08-30, Version 0.6.0
 ### Commits
 - [[`1070eb3166`](https://github.com/datrs/random-access-disk/commits/1070eb31665c3578842997557af292a9e702a033)] (cargo-release) version 0.6.0 (Yoshua Wuyts)
