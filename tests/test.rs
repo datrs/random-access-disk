@@ -117,3 +117,41 @@ fn can_truncate_eq() {
   c_file.read_to_string(&mut c_contents).unwrap();
   assert_eq!(c_contents, "hello world");
 }
+
+#[test]
+fn can_len() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::open(dir.path().join("8.db")).unwrap();
+  assert_eq!(file.len().unwrap(), 0);
+  file.write(0, b"hello").unwrap();
+  assert_eq!(file.len().unwrap(), 5);
+  file.write(5, b" world").unwrap();
+  assert_eq!(file.len().unwrap(), 11);
+  file.truncate(15).unwrap();
+  assert_eq!(file.len().unwrap(), 15);
+  file.truncate(8).unwrap();
+  assert_eq!(file.len().unwrap(), 8);
+}
+
+#[test]
+fn can_is_empty() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::open(dir.path().join("9.db")).unwrap();
+  assert_eq!(file.is_empty().unwrap(), true);
+  file.write(0, b"hello").unwrap();
+  assert_eq!(file.is_empty().unwrap(), false);
+  file.truncate(0).unwrap();
+  assert_eq!(file.is_empty().unwrap(), true);
+  file.truncate(1).unwrap();
+  assert_eq!(file.is_empty().unwrap(), false);
+  file.truncate(0).unwrap();
+  assert_eq!(file.is_empty().unwrap(), true);
+  file.write(0, b"what").unwrap();
+  assert_eq!(file.is_empty().unwrap(), false);
+}

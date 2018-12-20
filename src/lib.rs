@@ -114,6 +114,14 @@ impl RandomAccess for RandomAccessDisk {
     file.sync_all()?;
     Ok(())
   }
+
+  fn len(&mut self) -> Result<usize, Self::Error> {
+    Ok(self.length as usize)
+  }
+
+  fn is_empty(&mut self) -> Result<bool, Self::Error> {
+    Ok(self.length == 0)
+  }
 }
 
 impl Drop for RandomAccessDisk {
