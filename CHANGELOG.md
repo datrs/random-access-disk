@@ -1,3 +1,19 @@
+## 2018-12-20, Version 0.8.0
+### Commits
+- [[`c7cdc2d39a`](https://github.com/datrs/random-access-disk/commit/c7cdc2d39a7d92103f7125c28d2451ecf6272578)] (cargo-release) version 0.8.0 (Yoshua Wuyts)
+- [[`65bffdf0b8`](https://github.com/datrs/random-access-disk/commit/65bffdf0b8ef6d7b37a89b9ef498fb62a24a2e25)] len() and is_empty() implementation (#21) (James Halliday)
+- [[`e6733d9273`](https://github.com/datrs/random-access-disk/commit/e6733d92734e42881ca5f90228eef96883b005a7)] Update changelog (Yoshua Wuyts)
+
+### Stats
+```diff
+ CHANGELOG.md  | 22 ++++++++++++++++++++++
+ Cargo.toml    |  4 ++--
+ src/lib.rs    |  8 ++++++++
+ tests/test.rs | 38 ++++++++++++++++++++++++++++++++++++++
+ 4 files changed, 70 insertions(+), 2 deletions(-)
+```
+
+
 ## 2018-11-21, Version 0.7.0
 ### Commits
 - [[`9059d4f552`](https://github.com/datrs/random-access-disk/commit/9059d4f5524f16f52badff98a92e4b7db308a2d0)] (cargo-release) version 0.7.0 (Yoshua Wuyts)
