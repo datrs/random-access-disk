@@ -21,28 +21,17 @@ pub struct RandomAccessDisk {
   filename: path::PathBuf,
   file: Option<fs::File>,
   length: u64,
+  auto_sync: bool,
 }
 
 impl RandomAccessDisk {
   /// Create a new instance.
   #[allow(clippy::new_ret_no_self)]
   pub fn open(filename: path::PathBuf) -> Result<RandomAccessDisk, Error> {
-    if let Some(dirname) = filename.parent() {
-      mkdirp::mkdirp(&dirname)?;
-    }
-    let file = OpenOptions::new()
-      .create(true)
-      .read(true)
-      .write(true)
-      .open(&filename)?;
-    file.sync_all()?;
-
-    let metadata = filename.metadata()?;
-    Ok(RandomAccessDisk {
-      filename,
-      file: Some(file),
-      length: metadata.len(),
-    })
+    Self::builder(filename).build()
+  }
+  pub fn builder(filename: path::PathBuf) -> Builder {
+    Builder::new(filename)
   }
 }
 
@@ -53,7 +42,9 @@ impl RandomAccess for RandomAccessDisk {
     let mut file = self.file.as_ref().expect("self.file was None.");
     file.seek(SeekFrom::Start(offset as u64))?;
     file.write_all(&data)?;
-    file.sync_all()?;
+    if self.auto_sync {
+      file.sync_all()?;
+    }
 
     // We've changed the length of our file.
     let new_len = (offset + data.len()) as u64;
@@ -111,7 +102,9 @@ impl RandomAccess for RandomAccessDisk {
     let file = self.file.as_ref().expect("self.file was None.");
     self.length = length as u64;
     file.set_len(self.length)?;
-    file.sync_all()?;
+    if self.auto_sync {
+      file.sync_all()?;
+    }
     Ok(())
   }
 
@@ -122,6 +115,14 @@ impl RandomAccess for RandomAccessDisk {
   fn is_empty(&mut self) -> Result<bool, Self::Error> {
     Ok(self.length == 0)
   }
+
+  fn sync_all(&mut self) -> Result<(), Self::Error> {
+    if !self.auto_sync {
+      let file = self.file.as_ref().expect("self.file was None.");
+      file.sync_all()?;
+    }
+    Ok(())
+  }
 }
 
 impl Drop for RandomAccessDisk {
@@ -129,5 +130,42 @@ impl Drop for RandomAccessDisk {
     if let Some(file) = &self.file {
       file.sync_all().unwrap();
     }
+  }
+}
+
+pub struct Builder {
+  filename: path::PathBuf,
+  auto_sync: bool,
+}
+
+impl Builder {
+  pub fn new(filename: path::PathBuf) -> Self {
+    Self {
+      filename,
+      auto_sync: true,
+    }
+  }
+  pub fn auto_sync(mut self, auto_sync: bool) -> Self {
+    self.auto_sync = auto_sync;
+    self
+  }
+  pub fn build(self) -> Result<RandomAccessDisk, Error> {
+    if let Some(dirname) = self.filename.parent() {
+      mkdirp::mkdirp(&dirname)?;
+    }
+    let file = OpenOptions::new()
+      .create(true)
+      .read(true)
+      .write(true)
+      .open(&self.filename)?;
+    file.sync_all()?;
+
+    let metadata = self.filename.metadata()?;
+    Ok(RandomAccessDisk {
+      filename: self.filename,
+      file: Some(file),
+      length: metadata.len(),
+      auto_sync: self.auto_sync,
+    })
   }
 }
