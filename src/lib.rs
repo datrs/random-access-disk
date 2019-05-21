@@ -38,16 +38,16 @@ impl RandomAccessDisk {
 impl RandomAccess for RandomAccessDisk {
   type Error = Error;
 
-  fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), Self::Error> {
+  fn write(&mut self, offset: u64, data: &[u8]) -> Result<(), Self::Error> {
     let mut file = self.file.as_ref().expect("self.file was None.");
-    file.seek(SeekFrom::Start(offset as u64))?;
+    file.seek(SeekFrom::Start(offset))?;
     file.write_all(&data)?;
     if self.auto_sync {
       file.sync_all()?;
     }
 
     // We've changed the length of our file.
-    let new_len = (offset + data.len()) as u64;
+    let new_len = offset + (data.len() as u64);
     if new_len > self.length {
       self.length = new_len;
     }
@@ -65,8 +65,8 @@ impl RandomAccess for RandomAccessDisk {
   // #[cfg_attr(test, allow(unused_io_amount))]
   fn read(
     &mut self,
-    offset: usize,
-    length: usize,
+    offset: u64,
+    length: u64,
   ) -> Result<Vec<u8>, Self::Error> {
     ensure!(
       (offset + length) as u64 <= self.length,
@@ -79,26 +79,26 @@ impl RandomAccess for RandomAccessDisk {
     );
 
     let mut file = self.file.as_ref().expect("self.file was None.");
-    let mut buffer = vec![0; length];
-    file.seek(SeekFrom::Start(offset as u64))?;
+    let mut buffer = vec![0; length as usize];
+    file.seek(SeekFrom::Start(offset))?;
     let _bytes_read = file.read(&mut buffer[..])?;
     Ok(buffer)
   }
 
   fn read_to_writer(
     &mut self,
-    _offset: usize,
-    _length: usize,
+    _offset: u64,
+    _length: u64,
     _buf: &mut impl Write,
   ) -> Result<(), Self::Error> {
     unimplemented!()
   }
 
-  fn del(&mut self, _offset: usize, _length: usize) -> Result<(), Self::Error> {
+  fn del(&mut self, _offset: u64, _length: u64) -> Result<(), Self::Error> {
     panic!("Not implemented yet");
   }
 
-  fn truncate(&mut self, length: usize) -> Result<(), Self::Error> {
+  fn truncate(&mut self, length: u64) -> Result<(), Self::Error> {
     let file = self.file.as_ref().expect("self.file was None.");
     self.length = length as u64;
     file.set_len(self.length)?;
@@ -108,8 +108,8 @@ impl RandomAccess for RandomAccessDisk {
     Ok(())
   }
 
-  fn len(&mut self) -> Result<usize, Self::Error> {
-    Ok(self.length as usize)
+  fn len(&mut self) -> Result<u64, Self::Error> {
+    Ok(self.length)
   }
 
   fn is_empty(&mut self) -> Result<bool, Self::Error> {
