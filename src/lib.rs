@@ -3,12 +3,7 @@
 #![cfg_attr(feature = "nightly", doc(include = "../README.md"))]
 #![cfg_attr(test, deny(warnings))]
 
-#[macro_use]
-extern crate failure;
-extern crate mkdirp;
-extern crate random_access_storage;
-
-use failure::Error;
+use failure::{ensure, Error};
 use random_access_storage::RandomAccess;
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -63,11 +58,7 @@ impl RandomAccess for RandomAccessDisk {
   // because we're replacing empty data with actual zeroes - which does not
   // reflect the state of the world.
   // #[cfg_attr(test, allow(unused_io_amount))]
-  fn read(
-    &mut self,
-    offset: u64,
-    length: u64,
-  ) -> Result<Vec<u8>, Self::Error> {
+  fn read(&mut self, offset: u64, length: u64) -> Result<Vec<u8>, Self::Error> {
     ensure!(
       (offset + length) as u64 <= self.length,
       format!(

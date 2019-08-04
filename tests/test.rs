@@ -1,7 +1,4 @@
-extern crate random_access_disk as rad;
-extern crate random_access_storage;
-extern crate tempfile;
-
+use random_access_disk as rad;
 use random_access_storage::RandomAccess;
 use std::io::Read;
 use tempfile::Builder;

@@ -1,13 +1,7 @@
-#[macro_use]
-extern crate quickcheck;
-extern crate rand;
-extern crate random_access_disk as rad;
-extern crate random_access_storage;
-extern crate tempfile;
-
 use self::Op::*;
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::{quickcheck, Arbitrary, Gen};
 use rand::Rng;
+use random_access_disk as rad;
 use random_access_storage::RandomAccess;
 use std::u8;
 use tempfile::Builder;
