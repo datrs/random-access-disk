@@ -1,34 +1,28 @@
-#[macro_use]
-extern crate quickcheck;
-extern crate rand;
-extern crate random_access_disk as rad;
-extern crate random_access_storage;
-extern crate tempfile;
-
 use self::Op::*;
-use quickcheck::{Arbitrary, Gen};
+use quickcheck::{quickcheck, Arbitrary, Gen};
 use rand::Rng;
+use random_access_disk as rad;
 use random_access_storage::RandomAccess;
 use std::u8;
 use tempfile::Builder;
 
-const MAX_FILE_SIZE: usize = 5 * 10; // 5mb
+const MAX_FILE_SIZE: u64 = 5 * 10; // 5mb
 
 #[derive(Clone, Debug)]
 enum Op {
-  Read { offset: usize, length: usize },
-  Write { offset: usize, data: Vec<u8> },
+  Read { offset: u64, length: u64 },
+  Write { offset: u64, data: Vec<u8> },
 }
 
 impl Arbitrary for Op {
   fn arbitrary<G: Gen>(g: &mut G) -> Self {
-    let offset: usize = g.gen_range(0, MAX_FILE_SIZE);
-    let length: usize = g.gen_range(0, MAX_FILE_SIZE / 3);
+    let offset: u64 = g.gen_range(0, MAX_FILE_SIZE);
+    let length: u64 = g.gen_range(0, MAX_FILE_SIZE / 3);
 
     if g.gen::<bool>() {
       Read { offset, length }
     } else {
-      let mut data = Vec::with_capacity(length);
+      let mut data = Vec::with_capacity(length as usize);
       for _ in 0..length {
         data.push(u8::arbitrary(g));
       }
@@ -48,22 +42,22 @@ quickcheck! {
       match op {
         Read { offset, length } => {
           let end = offset + length;
-          if model.len() >= end {
+          if model.len() as u64 >= end {
             assert_eq!(
               implementation.read(offset, length).expect("Reads should be successful."),
-              &model[offset..end]
+              &model[offset as usize..end as usize]
             );
           } else {
             assert!(implementation.read(offset, length).is_err());
           }
         },
         Write { offset, ref data } => {
-          let end = offset + data.len();
-          if model.len() < end {
-            model.resize(end, 0);
+          let end = offset + (data.len() as u64);
+          if (model.len() as u64) < end {
+            model.resize(end as usize, 0);
           }
           implementation.write(offset, data).expect("Writes should be successful.");
-          model[offset..end].copy_from_slice(data);
+          model[offset as usize..end as usize].copy_from_slice(data);
         },
       }
     }

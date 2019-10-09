@@ -3,12 +3,7 @@
 #![cfg_attr(feature = "nightly", doc(include = "../README.md"))]
 #![cfg_attr(test, deny(warnings))]
 
-#[macro_use]
-extern crate failure;
-extern crate mkdirp;
-extern crate random_access_storage;
-
-use failure::Error;
+use failure::{ensure, Error};
 use random_access_storage::RandomAccess;
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -21,42 +16,33 @@ pub struct RandomAccessDisk {
   filename: path::PathBuf,
   file: Option<fs::File>,
   length: u64,
+  auto_sync: bool,
 }
 
 impl RandomAccessDisk {
   /// Create a new instance.
   #[allow(clippy::new_ret_no_self)]
   pub fn open(filename: path::PathBuf) -> Result<RandomAccessDisk, Error> {
-    if let Some(dirname) = filename.parent() {
-      mkdirp::mkdirp(&dirname)?;
-    }
-    let file = OpenOptions::new()
-      .create(true)
-      .read(true)
-      .write(true)
-      .open(&filename)?;
-    file.sync_all()?;
-
-    let metadata = filename.metadata()?;
-    Ok(RandomAccessDisk {
-      filename,
-      file: Some(file),
-      length: metadata.len(),
-    })
+    Self::builder(filename).build()
+  }
+  pub fn builder(filename: path::PathBuf) -> Builder {
+    Builder::new(filename)
   }
 }
 
 impl RandomAccess for RandomAccessDisk {
   type Error = Error;
 
-  fn write(&mut self, offset: usize, data: &[u8]) -> Result<(), Self::Error> {
+  fn write(&mut self, offset: u64, data: &[u8]) -> Result<(), Self::Error> {
     let mut file = self.file.as_ref().expect("self.file was None.");
-    file.seek(SeekFrom::Start(offset as u64))?;
+    file.seek(SeekFrom::Start(offset))?;
     file.write_all(&data)?;
-    file.sync_all()?;
+    if self.auto_sync {
+      file.sync_all()?;
+    }
 
     // We've changed the length of our file.
-    let new_len = (offset + data.len()) as u64;
+    let new_len = offset + (data.len() as u64);
     if new_len > self.length {
       self.length = new_len;
     }
@@ -72,11 +58,7 @@ impl RandomAccess for RandomAccessDisk {
   // because we're replacing empty data with actual zeroes - which does not
   // reflect the state of the world.
   // #[cfg_attr(test, allow(unused_io_amount))]
-  fn read(
-    &mut self,
-    offset: usize,
-    length: usize,
-  ) -> Result<Vec<u8>, Self::Error> {
+  fn read(&mut self, offset: u64, length: u64) -> Result<Vec<u8>, Self::Error> {
     ensure!(
       (offset + length) as u64 <= self.length,
       format!(
@@ -88,39 +70,49 @@ impl RandomAccess for RandomAccessDisk {
     );
 
     let mut file = self.file.as_ref().expect("self.file was None.");
-    let mut buffer = vec![0; length];
-    file.seek(SeekFrom::Start(offset as u64))?;
+    let mut buffer = vec![0; length as usize];
+    file.seek(SeekFrom::Start(offset))?;
     let _bytes_read = file.read(&mut buffer[..])?;
     Ok(buffer)
   }
 
   fn read_to_writer(
     &mut self,
-    _offset: usize,
-    _length: usize,
+    _offset: u64,
+    _length: u64,
     _buf: &mut impl Write,
   ) -> Result<(), Self::Error> {
     unimplemented!()
   }
 
-  fn del(&mut self, _offset: usize, _length: usize) -> Result<(), Self::Error> {
+  fn del(&mut self, _offset: u64, _length: u64) -> Result<(), Self::Error> {
     panic!("Not implemented yet");
   }
 
-  fn truncate(&mut self, length: usize) -> Result<(), Self::Error> {
+  fn truncate(&mut self, length: u64) -> Result<(), Self::Error> {
     let file = self.file.as_ref().expect("self.file was None.");
     self.length = length as u64;
     file.set_len(self.length)?;
-    file.sync_all()?;
+    if self.auto_sync {
+      file.sync_all()?;
+    }
     Ok(())
   }
 
-  fn len(&mut self) -> Result<usize, Self::Error> {
-    Ok(self.length as usize)
+  fn len(&self) -> Result<u64, Self::Error> {
+    Ok(self.length)
   }
 
   fn is_empty(&mut self) -> Result<bool, Self::Error> {
     Ok(self.length == 0)
+  }
+
+  fn sync_all(&mut self) -> Result<(), Self::Error> {
+    if !self.auto_sync {
+      let file = self.file.as_ref().expect("self.file was None.");
+      file.sync_all()?;
+    }
+    Ok(())
   }
 }
 
@@ -129,5 +121,42 @@ impl Drop for RandomAccessDisk {
     if let Some(file) = &self.file {
       file.sync_all().unwrap();
     }
+  }
+}
+
+pub struct Builder {
+  filename: path::PathBuf,
+  auto_sync: bool,
+}
+
+impl Builder {
+  pub fn new(filename: path::PathBuf) -> Self {
+    Self {
+      filename,
+      auto_sync: true,
+    }
+  }
+  pub fn auto_sync(mut self, auto_sync: bool) -> Self {
+    self.auto_sync = auto_sync;
+    self
+  }
+  pub fn build(self) -> Result<RandomAccessDisk, Error> {
+    if let Some(dirname) = self.filename.parent() {
+      mkdirp::mkdirp(&dirname)?;
+    }
+    let file = OpenOptions::new()
+      .create(true)
+      .read(true)
+      .write(true)
+      .open(&self.filename)?;
+    file.sync_all()?;
+
+    let metadata = self.filename.metadata()?;
+    Ok(RandomAccessDisk {
+      filename: self.filename,
+      file: Some(file),
+      length: metadata.len(),
+      auto_sync: self.auto_sync,
+    })
   }
 }

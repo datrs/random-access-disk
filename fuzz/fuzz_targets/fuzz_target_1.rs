@@ -1,9 +1,7 @@
 #![no_main]
-#[macro_use]
-extern crate libfuzzer_sys;
-extern crate random_access_disk as rad;
-extern crate tempdir;
 
+use libfuzzer_sys::{fuzz_target};
+use random_access_disk as rad;
 use self::tempdir::TempDir;
 
 fuzz_target!(|data: &[u8]| {

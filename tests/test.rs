@@ -1,7 +1,4 @@
-extern crate random_access_disk as rad;
-extern crate random_access_storage;
-extern crate tempfile;
-
+use random_access_disk as rad;
 use random_access_storage::RandomAccess;
 use std::io::Read;
 use tempfile::Builder;
@@ -154,4 +151,81 @@ fn can_is_empty() {
   assert_eq!(file.is_empty().unwrap(), true);
   file.write(0, b"what").unwrap();
   assert_eq!(file.is_empty().unwrap(), false);
+}
+
+#[test]
+fn explicit_no_auto_sync() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::builder(dir.path().join("10.db"))
+    .auto_sync(false)
+    .build()
+    .unwrap();
+  file.write(0, b"hello").unwrap();
+  file.write(5, b" world").unwrap();
+  file.truncate(11).unwrap();
+  file.sync_all().unwrap();
+  let text = file.read(0, 11).unwrap();
+  assert_eq!(String::from_utf8(text.to_vec()).unwrap(), "hello world");
+  match file.read(0, 12) {
+    Ok(_) => panic!("file is too big. read past the end should have failed"),
+    _ => {}
+  };
+  let mut c_file = std::fs::File::open(dir.path().join("10.db")).unwrap();
+  let mut c_contents = String::new();
+  c_file.read_to_string(&mut c_contents).unwrap();
+  assert_eq!(c_contents, "hello world");
+}
+
+#[test]
+fn explicit_auto_sync() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::builder(dir.path().join("11.db"))
+    .auto_sync(true)
+    .build()
+    .unwrap();
+  file.write(0, b"hello").unwrap();
+  file.write(5, b" world").unwrap();
+  file.truncate(11).unwrap();
+  let text = file.read(0, 11).unwrap();
+  assert_eq!(String::from_utf8(text.to_vec()).unwrap(), "hello world");
+  match file.read(0, 12) {
+    Ok(_) => panic!("file is too big. read past the end should have failed"),
+    _ => {}
+  };
+  let mut c_file = std::fs::File::open(dir.path().join("11.db")).unwrap();
+  let mut c_contents = String::new();
+  c_file.read_to_string(&mut c_contents).unwrap();
+  assert_eq!(c_contents, "hello world");
+}
+
+#[test]
+fn explicit_auto_sync_with_sync_call() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::builder(dir.path().join("12.db"))
+    .auto_sync(true)
+    .build()
+    .unwrap();
+  file.write(0, b"hello").unwrap();
+  file.write(5, b" world").unwrap();
+  file.truncate(11).unwrap();
+  file.sync_all().unwrap();
+  let text = file.read(0, 11).unwrap();
+  assert_eq!(String::from_utf8(text.to_vec()).unwrap(), "hello world");
+  match file.read(0, 12) {
+    Ok(_) => panic!("file is too big. read past the end should have failed"),
+    _ => {}
+  };
+  let mut c_file = std::fs::File::open(dir.path().join("12.db")).unwrap();
+  let mut c_contents = String::new();
+  c_file.read_to_string(&mut c_contents).unwrap();
+  assert_eq!(c_contents, "hello world");
 }
