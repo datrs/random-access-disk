@@ -15,6 +15,6 @@ mkdirp = "1.0.0"
 random-access-storage = "3.0.0"
 
 [dev-dependencies]
-quickcheck = "0.8.5"
+quickcheck = "0.9.1"
 rand = "0.6.5"
 tempfile = "3.1.0"
