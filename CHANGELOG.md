@@ -1,3 +1,29 @@
+## 2020-02-02, Version 1.0.0
+### Commits
+- [[`3de8d37a0c`](https://github.com/datrs/random-access-disk/commit/3de8d37a0c33bc15874de8870734bbdd07a8b24c)] 1.0.0 (substack)
+- [[`2fca3428a6`](https://github.com/datrs/random-access-disk/commit/2fca3428a6ca6e484c5b31c8b62422553641731e)] Merge pull request #28 from bltavares/bump-deps (Szabolcs Berecz)
+- [[`bebe8b4a2c`](https://github.com/datrs/random-access-disk/commit/bebe8b4a2c95dcd6d19c54ceb2fe854799af4ea4)] Update code to editio 2018 (Bruno Tavares)
+- [[`310dd8a5d7`](https://github.com/datrs/random-access-disk/commit/310dd8a5d79e2edcfbded8cb48a17c5949c6b276)] Bump random-access-storage to 3.0.0 (Bruno Tavares)
+- [[`95c3dad271`](https://github.com/datrs/random-access-disk/commit/95c3dad2715ade75c18337bb72f109573c9c08e3)] updated to use u64 (substack)
+- [[`1d884a4432`](https://github.com/datrs/random-access-disk/commit/1d884a443232528c2a0a9e03901cb12eca137ac1)] sync_all implementation (substack)
+- [[`bd9d0f6a86`](https://github.com/datrs/random-access-disk/commit/bd9d0f6a869d9f8225ae8582a5bfe5db6ca52578)] Update mkdirp requirement from 0.1.0 to 1.0.0 (dependabot-preview[bot])
+- [[`f9b34735e7`](https://github.com/datrs/random-access-disk/commit/f9b34735e79020ff2f39bef510026f5cf8bf02b3)] Update quickcheck requirement from 0.7.2 to 0.8.0 (dependabot[bot])
+- [[`4785a3dfa5`](https://github.com/datrs/random-access-disk/commit/4785a3dfa5aed164df833eafaeef4edda0dfd2c4)] Update changelog (Yoshua Wuyts)
+
+### Stats
+```diff
+ CHANGELOG.md                       |  16 ++++++-
+ Cargo.toml                         |  25 ++++-----
+ fuzz/Cargo.toml                    |   1 +-
+ fuzz/fuzz_targets/fuzz_target_1.rs |   6 +--
+ src/lib.rs                         | 109 ++++++++++++++++++++++++--------------
+ tests/model.rs                     |  34 ++++--------
+ tests/regression.rs                |   5 +--
+ tests/test.rs                      |  82 +++++++++++++++++++++++++++--
+ 8 files changed, 194 insertions(+), 84 deletions(-)
+```
+
+
 ## 2018-12-20, Version 0.8.0
 ### Commits
 - [[`c7cdc2d39a`](https://github.com/datrs/random-access-disk/commit/c7cdc2d39a7d92103f7125c28d2451ecf6272578)] (cargo-release) version 0.8.0 (Yoshua Wuyts)
