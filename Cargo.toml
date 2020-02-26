@@ -10,7 +10,7 @@ version = "1.0.0"
 edition = "2018"
 
 [dependencies]
-failure = "0.1.6"
+anyhow = "1.0.26"
 mkdirp = "1.0.0"
 random-access-storage = "3.0.0"
 

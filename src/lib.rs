@@ -3,7 +3,7 @@
 #![cfg_attr(feature = "nightly", doc(include = "../README.md"))]
 #![cfg_attr(test, deny(warnings))]
 
-use failure::{ensure, Error};
+use anyhow::{anyhow, Error};
 use random_access_storage::RandomAccess;
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -31,7 +31,7 @@ impl RandomAccessDisk {
 }
 
 impl RandomAccess for RandomAccessDisk {
-  type Error = Error;
+  type Error = Box<dyn std::error::Error + Sync + Send>;
 
   fn write(&mut self, offset: u64, data: &[u8]) -> Result<(), Self::Error> {
     let mut file = self.file.as_ref().expect("self.file was None.");
@@ -59,15 +59,17 @@ impl RandomAccess for RandomAccessDisk {
   // reflect the state of the world.
   // #[cfg_attr(test, allow(unused_io_amount))]
   fn read(&mut self, offset: u64, length: u64) -> Result<Vec<u8>, Self::Error> {
-    ensure!(
-      (offset + length) as u64 <= self.length,
-      format!(
-        "Read bounds exceeded. {} < {}..{}",
-        self.length,
-        offset,
-        offset + length
-      )
-    );
+    if (offset + length) as u64 > self.length {
+      return Err(
+        anyhow!(
+          "Read bounds exceeded. {} < {}..{}",
+          self.length,
+          offset,
+          offset + length
+        )
+        .into(),
+      );
+    }
 
     let mut file = self.file.as_ref().expect("self.file was None.");
     let mut buffer = vec![0; length as usize];
