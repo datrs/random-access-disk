@@ -4,9 +4,10 @@
 #![cfg_attr(test, deny(warnings))]
 
 use anyhow::{anyhow, Error};
+use async_std::fs::{self, OpenOptions};
+use async_std::io::prelude::{SeekExt, WriteExt};
+use async_std::io::{ReadExt, SeekFrom};
 use random_access_storage::RandomAccess;
-use std::fs::{self, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write};
 use std::ops::Drop;
 use std::path;
 
@@ -22,23 +23,31 @@ pub struct RandomAccessDisk {
 impl RandomAccessDisk {
   /// Create a new instance.
   #[allow(clippy::new_ret_no_self)]
-  pub fn open(filename: path::PathBuf) -> Result<RandomAccessDisk, Error> {
-    Self::builder(filename).build()
+  pub async fn open(
+    filename: path::PathBuf,
+  ) -> Result<RandomAccessDisk, Error> {
+    Self::builder(filename).build().await
   }
+
   pub fn builder(filename: path::PathBuf) -> Builder {
     Builder::new(filename)
   }
 }
 
+#[async_trait::async_trait]
 impl RandomAccess for RandomAccessDisk {
   type Error = Box<dyn std::error::Error + Sync + Send>;
 
-  fn write(&mut self, offset: u64, data: &[u8]) -> Result<(), Self::Error> {
+  async fn write(
+    &mut self,
+    offset: u64,
+    data: &[u8],
+  ) -> Result<(), Self::Error> {
     let mut file = self.file.as_ref().expect("self.file was None.");
-    file.seek(SeekFrom::Start(offset))?;
-    file.write_all(&data)?;
+    file.seek(SeekFrom::Start(offset)).await?;
+    file.write_all(&data).await?;
     if self.auto_sync {
-      file.sync_all()?;
+      file.sync_all().await?;
     }
 
     // We've changed the length of our file.
@@ -58,7 +67,11 @@ impl RandomAccess for RandomAccessDisk {
   // because we're replacing empty data with actual zeroes - which does not
   // reflect the state of the world.
   // #[cfg_attr(test, allow(unused_io_amount))]
-  fn read(&mut self, offset: u64, length: u64) -> Result<Vec<u8>, Self::Error> {
+  async fn read(
+    &mut self,
+    offset: u64,
+    length: u64,
+  ) -> Result<Vec<u8>, Self::Error> {
     if (offset + length) as u64 > self.length {
       return Err(
         anyhow!(
@@ -73,46 +86,50 @@ impl RandomAccess for RandomAccessDisk {
 
     let mut file = self.file.as_ref().expect("self.file was None.");
     let mut buffer = vec![0; length as usize];
-    file.seek(SeekFrom::Start(offset))?;
-    let _bytes_read = file.read(&mut buffer[..])?;
+    file.seek(SeekFrom::Start(offset)).await?;
+    let _bytes_read = file.read(&mut buffer[..]).await?;
     Ok(buffer)
   }
 
-  fn read_to_writer(
+  async fn read_to_writer(
     &mut self,
     _offset: u64,
     _length: u64,
-    _buf: &mut impl Write,
+    _buf: &mut (impl async_std::io::Write + Send),
   ) -> Result<(), Self::Error> {
     unimplemented!()
   }
 
-  fn del(&mut self, _offset: u64, _length: u64) -> Result<(), Self::Error> {
+  async fn del(
+    &mut self,
+    _offset: u64,
+    _length: u64,
+  ) -> Result<(), Self::Error> {
     panic!("Not implemented yet");
   }
 
-  fn truncate(&mut self, length: u64) -> Result<(), Self::Error> {
+  async fn truncate(&mut self, length: u64) -> Result<(), Self::Error> {
     let file = self.file.as_ref().expect("self.file was None.");
     self.length = length as u64;
-    file.set_len(self.length)?;
+    file.set_len(self.length).await?;
     if self.auto_sync {
-      file.sync_all()?;
+      file.sync_all().await?;
     }
     Ok(())
   }
 
-  fn len(&self) -> Result<u64, Self::Error> {
+  async fn len(&self) -> Result<u64, Self::Error> {
     Ok(self.length)
   }
 
-  fn is_empty(&mut self) -> Result<bool, Self::Error> {
+  async fn is_empty(&mut self) -> Result<bool, Self::Error> {
     Ok(self.length == 0)
   }
 
-  fn sync_all(&mut self) -> Result<(), Self::Error> {
+  async fn sync_all(&mut self) -> Result<(), Self::Error> {
     if !self.auto_sync {
       let file = self.file.as_ref().expect("self.file was None.");
-      file.sync_all()?;
+      file.sync_all().await?;
     }
     Ok(())
   }
@@ -121,7 +138,12 @@ impl RandomAccess for RandomAccessDisk {
 impl Drop for RandomAccessDisk {
   fn drop(&mut self) {
     if let Some(file) = &self.file {
-      file.sync_all().unwrap();
+      // We need to flush the file on drop. Unfortunately, that is not possible to do in a
+      // non-blocking fashion, but our only other option here is losing data remaining in the
+      // write cache. Good task schedulers should be resilient to occasional blocking hiccups in
+      // file destructors so we don't expect this to be a common problem in practice.
+      // (from async_std::fs::File::drop)
+      let _ = async_std::task::block_on(file.sync_all());
     }
   }
 }
@@ -142,7 +164,8 @@ impl Builder {
     self.auto_sync = auto_sync;
     self
   }
-  pub fn build(self) -> Result<RandomAccessDisk, Error> {
+
+  pub async fn build(self) -> Result<RandomAccessDisk, Error> {
     if let Some(dirname) = self.filename.parent() {
       mkdirp::mkdirp(&dirname)?;
     }
@@ -150,8 +173,9 @@ impl Builder {
       .create(true)
       .read(true)
       .write(true)
-      .open(&self.filename)?;
-    file.sync_all()?;
+      .open(&self.filename)
+      .await?;
+    file.sync_all().await?;
 
     let metadata = self.filename.metadata()?;
     Ok(RandomAccessDisk {
