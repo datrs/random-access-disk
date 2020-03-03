@@ -1,3 +1,19 @@
+## 2020-03-03, Version 1.1.0
+### Commits
+- [[`7063f6fa47`](https://github.com/datrs/random-access-disk/commit/7063f6fa47dc7689e1d44055aa594845345f890f)] (cargo-release) version 1.1.0 (Bruno Tavares)
+- [[`218aab2629`](https://github.com/datrs/random-access-disk/commit/218aab2629ce76308c946c62b61078b749100c53)] From Failure into std::error::Error (#36) (Bruno Tavares)
+- [[`a8bfebeeb7`](https://github.com/datrs/random-access-disk/commit/a8bfebeeb7edda672783aeb9ab5fa9f9555e4b74)] Bump dependencies and fix travis (#35) (Bruno Tavares)
+
+### Stats
+```diff
+ .travis.yml  |  8 +++++---
+ CHANGELOG.md | 26 ++++++++++++++++++++++++++
+ Cargo.toml   |  8 ++++----
+ src/lib.rs   | 24 +++++++++++++-----------
+ 4 files changed, 48 insertions(+), 18 deletions(-)
+```
+
+
 ## 2020-02-02, Version 1.0.0
 ### Commits
 - [[`3de8d37a0c`](https://github.com/datrs/random-access-disk/commit/3de8d37a0c33bc15874de8870734bbdd07a8b24c)] 1.0.0 (substack)
