@@ -6,7 +6,7 @@ license = "MIT OR Apache-2.0"
 name = "random-access-disk"
 readme = "README.md"
 repository = "https://github.com/datrs/random-access-disk"
-version = "1.1.0"
+version = "2.0.0"
 edition = "2018"
 
 [dependencies]
