@@ -16,14 +16,30 @@ pub async fn trim(
   file: &mut async_std::fs::File,
   offset: u64,
   length: u64,
-  block_size: u64,
-) {
+  _block_size: u64,
+) -> Result<(), Error> {
+  use libc::{fallocate, FALLOC_FL_KEEP_SIZE, FALLOC_FL_PUNCH_HOLE};
   use std::os::unix::io::AsRawFd;
+
   let fd = file.as_raw_fd();
-  println!(
-    "TODO: trim fd {} from offset {} to length {}",
-    fd, offset, length
-  );
+  unsafe {
+    let ret = fallocate(
+      fd,
+      FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE,
+      offset as libc::off_t,
+      length as libc::off_t,
+    );
+
+    if ret < 0 {
+      return Err(anyhow!(
+        "Failed to punch hole to file on linux with return {} and OS error {}",
+        ret,
+        std::io::Error::last_os_error().to_string()
+      ));
+    }
+  }
+
+  Ok(())
 }
 
 /// OSX-specific trimming of a file to a sparse file
@@ -77,6 +93,7 @@ pub async fn trim(
 
 /// OSX-specific punching of a hole to a file. Works only with offset and length
 /// that matches file system block boundaries.
+#[cfg(target_os = "macos")]
 fn punch_hole(
   file: &async_std::fs::File,
   offset: u64,
