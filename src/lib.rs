@@ -11,9 +11,20 @@ use random_access_storage::RandomAccess;
 use std::ops::Drop;
 use std::path;
 
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "linux")]
+use linux::trim;
+
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(target_os = "macos")]
+use macos::trim;
+
 /// Main constructor.
 #[derive(Debug)]
 pub struct RandomAccessDisk {
+  #[allow(dead_code)]
   filename: path::PathBuf,
   file: Option<fs::File>,
   length: u64,
@@ -100,11 +111,11 @@ impl RandomAccess for RandomAccessDisk {
     unimplemented!()
   }
 
-  async fn del(
-    &mut self,
-    _offset: u64,
-    _length: u64,
-  ) -> Result<(), Self::Error> {
+  async fn del(&mut self, offset: u64, length: u64) -> Result<(), Self::Error> {
+    // TODO: Continue: https://cfsamson.github.io/book-exploring-async-basics/3_1_communicating_with_the_os.html
+    let mut file = self.file.as_ref().expect("self.file was None.");
+    trim(&mut file, offset, length);
+
     panic!("Not implemented yet");
   }
 
