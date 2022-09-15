@@ -130,6 +130,61 @@ async fn can_truncate_eq() {
 }
 
 #[async_std::test]
+async fn can_del_short() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::builder(dir.path().join("13.db"))
+    .auto_sync(true)
+    .build()
+    .await
+    .unwrap();
+  file.write(0, b"hello").await.unwrap();
+  file.write(5, b" world").await.unwrap();
+  file.write(11, b" people").await.unwrap();
+  file.del(5, 6).await.unwrap();
+  let hello = file.read(0, 5).await.unwrap();
+  assert_eq!(String::from_utf8(hello.to_vec()).unwrap(), "hello");
+  let zeros = file.read(5, 6).await.unwrap();
+  assert_eq!(zeros, vec![0; 6]);
+  let people = file.read(12, 6).await.unwrap();
+  assert_eq!(String::from_utf8(people.to_vec()).unwrap(), "people");
+}
+
+#[async_std::test]
+async fn can_del_long() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::builder(dir.path().join("14.db"))
+    .auto_sync(true)
+    .build()
+    .await
+    .unwrap();
+  file.write(0, b"hello").await.unwrap();
+  const MULTI_BLOCK_LEN: usize = 4096 * 3;
+  let multi_block = &[0x61 as u8; MULTI_BLOCK_LEN];
+  file.write(5, multi_block).await.unwrap();
+  file
+    .write((MULTI_BLOCK_LEN + 5) as u64, b"people")
+    .await
+    .unwrap();
+  file.del(5, MULTI_BLOCK_LEN as u64).await.unwrap();
+  let hello = file.read(0, 5).await.unwrap();
+  assert_eq!(String::from_utf8(hello.to_vec()).unwrap(), "hello");
+  let zeros = file.read(5, 10).await.unwrap();
+  assert_eq!(zeros, vec![0; 10]);
+  let zeros = file.read(MULTI_BLOCK_LEN as u64, 5).await.unwrap();
+  assert_eq!(zeros, vec![0; 5]);
+  let zeros = file.read((MULTI_BLOCK_LEN / 2) as u64, 5).await.unwrap();
+  assert_eq!(zeros, vec![0; 5]);
+  let people = file.read((MULTI_BLOCK_LEN + 5) as u64, 6).await.unwrap();
+  assert_eq!(String::from_utf8(people.to_vec()).unwrap(), "people");
+}
+
+#[async_std::test]
 async fn can_len() {
   let dir = Builder::new()
     .prefix("random-access-disk")

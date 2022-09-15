@@ -11,15 +11,55 @@ use random_access_storage::RandomAccess;
 use std::ops::Drop;
 use std::path;
 
-#[cfg(target_os = "linux")]
-mod linux;
-#[cfg(target_os = "linux")]
-use linux::trim;
+#[cfg(all(
+  feature = "sparse",
+  any(
+    target_os = "linux",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "macos",
+  )
+))]
+mod unix;
+#[cfg(all(
+  feature = "sparse",
+  any(
+    target_os = "linux",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "macos",
+  )
+))]
+use unix::{get_length_and_block_size, trim};
 
-#[cfg(target_os = "macos")]
-mod macos;
-#[cfg(target_os = "macos")]
-use macos::trim;
+#[cfg(all(feature = "sparse", windows))]
+mod windows;
+#[cfg(all(feature = "sparse", windows))]
+use windows::{get_length_and_block_size, trim};
+
+#[cfg(not(all(
+  feature = "sparse",
+  any(
+    target_os = "linux",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "macos",
+    windows,
+  )
+)))]
+mod default;
+
+#[cfg(not(all(
+  feature = "sparse",
+  any(
+    target_os = "linux",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "macos",
+    windows,
+  )
+)))]
+use default::{get_length_and_block_size, trim};
 
 /// Main constructor.
 #[derive(Debug)]
@@ -28,6 +68,7 @@ pub struct RandomAccessDisk {
   filename: path::PathBuf,
   file: Option<fs::File>,
   length: u64,
+  block_size: u64,
   auto_sync: bool,
 }
 
@@ -112,11 +153,12 @@ impl RandomAccess for RandomAccessDisk {
   }
 
   async fn del(&mut self, offset: u64, length: u64) -> Result<(), Self::Error> {
-    // TODO: Continue: https://cfsamson.github.io/book-exploring-async-basics/3_1_communicating_with_the_os.html
-    let mut file = self.file.as_ref().expect("self.file was None.");
-    trim(&mut file, offset, length);
-
-    panic!("Not implemented yet");
+    let mut file = self.file.as_mut().expect("self.file was None.");
+    trim(&mut file, offset, length, self.block_size).await?;
+    if self.auto_sync {
+      file.sync_all().await?;
+    }
+    Ok(())
   }
 
   async fn truncate(&mut self, length: u64) -> Result<(), Self::Error> {
@@ -188,12 +230,13 @@ impl Builder {
       .await?;
     file.sync_all().await?;
 
-    let metadata = self.filename.metadata()?;
+    let (length, block_size) = get_length_and_block_size(&file).await?;
     Ok(RandomAccessDisk {
       filename: self.filename,
       file: Some(file),
-      length: metadata.len(),
+      length,
       auto_sync: self.auto_sync,
+      block_size,
     })
   }
 }
