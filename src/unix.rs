@@ -53,20 +53,40 @@ pub async fn trim(
   use async_std::io::prelude::{SeekExt, WriteExt};
   use async_std::io::SeekFrom;
 
-  let end = offset + length;
-
-  // Find distance to next block
-  let next_block_distance: u64 =
-    block_size - ((offset + block_size) % block_size);
-  if next_block_distance > 0 {
-    // Needs zeroing of the current block
-    let data = vec![0 as u8; next_block_distance as usize];
-    file.seek(SeekFrom::Start(offset)).await?;
-    file.write_all(&data).await?;
+  if length == 0 {
+    return Ok(());
   }
 
+  // Find distance to next block
+  let next_block_distance: u64 = if offset % block_size == 0 {
+    0
+  } else {
+    block_size - offset % block_size
+  };
+
   // Find offset to from end to the last block
+  let end = offset + length;
   let last_block_offset = end - (end % block_size);
+
+  // Find out how much initially be zeroed
+  let initial_zero_length = if offset + next_block_distance >= last_block_offset
+  {
+    // This is the simple case of nothing to hole punch
+    length
+  } else {
+    next_block_distance
+  };
+
+  if initial_zero_length > 0 {
+    // Needs zeroing
+    let data = vec![0 as u8; initial_zero_length as usize];
+    file.seek(SeekFrom::Start(offset)).await?;
+    file.write_all(&data).await?;
+    if initial_zero_length == length {
+      // This was the simple case of zeroing without hole punching
+      return Ok(());
+    }
+  }
 
   // Now see if there are blocks in the middle that can be punched
   // into holes

@@ -130,61 +130,6 @@ async fn can_truncate_eq() {
 }
 
 #[async_std::test]
-async fn can_del_short() {
-  let dir = Builder::new()
-    .prefix("random-access-disk")
-    .tempdir()
-    .unwrap();
-  let mut file = rad::RandomAccessDisk::builder(dir.path().join("13.db"))
-    .auto_sync(true)
-    .build()
-    .await
-    .unwrap();
-  file.write(0, b"hello").await.unwrap();
-  file.write(5, b" world").await.unwrap();
-  file.write(11, b" people").await.unwrap();
-  file.del(5, 6).await.unwrap();
-  let hello = file.read(0, 5).await.unwrap();
-  assert_eq!(String::from_utf8(hello.to_vec()).unwrap(), "hello");
-  let zeros = file.read(5, 6).await.unwrap();
-  assert_eq!(zeros, vec![0; 6]);
-  let people = file.read(12, 6).await.unwrap();
-  assert_eq!(String::from_utf8(people.to_vec()).unwrap(), "people");
-}
-
-#[async_std::test]
-async fn can_del_long() {
-  let dir = Builder::new()
-    .prefix("random-access-disk")
-    .tempdir()
-    .unwrap();
-  let mut file = rad::RandomAccessDisk::builder(dir.path().join("14.db"))
-    .auto_sync(true)
-    .build()
-    .await
-    .unwrap();
-  file.write(0, b"hello").await.unwrap();
-  const MULTI_BLOCK_LEN: usize = 4096 * 3;
-  let multi_block = &[0x61 as u8; MULTI_BLOCK_LEN];
-  file.write(5, multi_block).await.unwrap();
-  file
-    .write((MULTI_BLOCK_LEN + 5) as u64, b"people")
-    .await
-    .unwrap();
-  file.del(5, MULTI_BLOCK_LEN as u64).await.unwrap();
-  let hello = file.read(0, 5).await.unwrap();
-  assert_eq!(String::from_utf8(hello.to_vec()).unwrap(), "hello");
-  let zeros = file.read(5, 10).await.unwrap();
-  assert_eq!(zeros, vec![0; 10]);
-  let zeros = file.read(MULTI_BLOCK_LEN as u64, 5).await.unwrap();
-  assert_eq!(zeros, vec![0; 5]);
-  let zeros = file.read((MULTI_BLOCK_LEN / 2) as u64, 5).await.unwrap();
-  assert_eq!(zeros, vec![0; 5]);
-  let people = file.read((MULTI_BLOCK_LEN + 5) as u64, 6).await.unwrap();
-  assert_eq!(String::from_utf8(people.to_vec()).unwrap(), "people");
-}
-
-#[async_std::test]
 async fn can_len() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -304,4 +249,127 @@ async fn explicit_auto_sync_with_sync_call() {
   let mut c_contents = String::new();
   c_file.read_to_string(&mut c_contents).unwrap();
   assert_eq!(c_contents, "hello world");
+}
+
+#[async_std::test]
+async fn can_del_short() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::builder(dir.path().join("13.db"))
+    .auto_sync(true)
+    .build()
+    .await
+    .unwrap();
+  file.write(0, b"hello").await.unwrap();
+  file.write(5, b" world").await.unwrap();
+  file.write(11, b" people").await.unwrap();
+  file.del(5, 6).await.unwrap();
+  let hello = file.read(0, 5).await.unwrap();
+  assert_eq!(String::from_utf8(hello.to_vec()).unwrap(), "hello");
+  let zeros = file.read(5, 6).await.unwrap();
+  assert_eq!(zeros, vec![0; 6]);
+  let people = file.read(12, 6).await.unwrap();
+  assert_eq!(String::from_utf8(people.to_vec()).unwrap(), "people");
+}
+
+#[async_std::test]
+async fn can_del_long_middle() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::builder(dir.path().join("14.db"))
+    .auto_sync(true)
+    .build()
+    .await
+    .unwrap();
+  file.write(0, b"hello").await.unwrap();
+  const MULTI_BLOCK_LEN: usize = 4096 * 3;
+  let multi_block = &[0x61 as u8; MULTI_BLOCK_LEN];
+  file.write(5, multi_block).await.unwrap();
+  file
+    .write((MULTI_BLOCK_LEN + 5) as u64, b"to all the ")
+    .await
+    .unwrap();
+  file
+    .write((MULTI_BLOCK_LEN + 16) as u64, b"people")
+    .await
+    .unwrap();
+  file.del(5, MULTI_BLOCK_LEN as u64).await.unwrap();
+  let hello = file.read(0, 5).await.unwrap();
+  assert_eq!(String::from_utf8(hello.to_vec()).unwrap(), "hello");
+  let zeros = file.read(5, 10).await.unwrap();
+  assert_eq!(zeros, vec![0; 10]);
+  let zeros = file.read(MULTI_BLOCK_LEN as u64, 5).await.unwrap();
+  assert_eq!(zeros, vec![0; 5]);
+  let zeros = file.read((MULTI_BLOCK_LEN / 2) as u64, 5).await.unwrap();
+  assert_eq!(zeros, vec![0; 5]);
+  let to_all_the_people =
+    file.read((MULTI_BLOCK_LEN + 5) as u64, 17).await.unwrap();
+  assert_eq!(
+    String::from_utf8(to_all_the_people.to_vec()).unwrap(),
+    "to all the people"
+  );
+  file.del((MULTI_BLOCK_LEN + 7) as u64, 4).await.unwrap();
+  let zeros = file.read((MULTI_BLOCK_LEN + 7) as u64, 4).await.unwrap();
+  assert_eq!(zeros, vec![0; 4]);
+  let to = file.read((MULTI_BLOCK_LEN + 5) as u64, 2).await.unwrap();
+  assert_eq!(String::from_utf8(to.to_vec()).unwrap(), "to");
+}
+
+#[async_std::test]
+async fn can_del_long_exact_block() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::builder(dir.path().join("15.db"))
+    .auto_sync(true)
+    .build()
+    .await
+    .unwrap();
+  const BLOCK_LEN: usize = 4096;
+  let block = &[0x61 as u8; BLOCK_LEN];
+  file.write(0, block).await.unwrap();
+  file.del(0, BLOCK_LEN as u64).await.unwrap();
+  let zeros = file.read(0, 5).await.unwrap();
+  assert_eq!(zeros, vec![0; 5]);
+  let zeros = file.read(BLOCK_LEN as u64 - 5, 5).await.unwrap();
+  assert_eq!(zeros, vec![0; 5]);
+}
+
+#[async_std::test]
+async fn can_del_long_more_than_block() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::builder(dir.path().join("16.db"))
+    .auto_sync(true)
+    .build()
+    .await
+    .unwrap();
+  file.write(0, b"hello").await.unwrap();
+  const MORE_THAN_BLOCK_LEN: usize = 4096 + 1000;
+  let more_than_block = &[0x61 as u8; MORE_THAN_BLOCK_LEN];
+  file.write(5, more_than_block).await.unwrap();
+  file.del(5, MORE_THAN_BLOCK_LEN as u64).await.unwrap();
+  let zeros = file.read(5, 5).await.unwrap();
+  assert_eq!(zeros, vec![0; 5]);
+  let zeros = file.read(MORE_THAN_BLOCK_LEN as u64 - 5, 5).await.unwrap();
+  assert_eq!(zeros, vec![0; 5]);
+
+  const EXACT_TO_THIRD_BLOCK_LEN: usize = 4096 * 2 - 5;
+  let exact_to_third_block = &[0x61 as u8; EXACT_TO_THIRD_BLOCK_LEN];
+  file.write(5, exact_to_third_block).await.unwrap();
+  file.del(5, EXACT_TO_THIRD_BLOCK_LEN as u64).await.unwrap();
+  let zeros = file.read(5, 5).await.unwrap();
+  assert_eq!(zeros, vec![0; 5]);
+  let zeros = file
+    .read(EXACT_TO_THIRD_BLOCK_LEN as u64 - 5, 5)
+    .await
+    .unwrap();
+  assert_eq!(zeros, vec![0; 5]);
 }
