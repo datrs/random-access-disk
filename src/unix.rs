@@ -1,8 +1,12 @@
 use anyhow::{anyhow, Error};
+#[cfg(feature = "async-std")]
+use async_std::fs;
+#[cfg(feature = "tokio")]
+use tokio::fs;
 
 /// Get unix file length and file system block size
 pub async fn get_length_and_block_size(
-  file: &async_std::fs::File,
+  file: &fs::File,
 ) -> Result<(u64, u64), Error> {
   use std::os::unix::fs::MetadataExt;
   let meta = file.metadata().await?;
@@ -13,7 +17,7 @@ pub async fn get_length_and_block_size(
 /// Linux-specific trimming to sparse files
 #[cfg(any(target_os = "linux", target_os = "android", target_os = "freebsd"))]
 pub async fn trim(
-  file: &mut async_std::fs::File,
+  file: &mut fs::File,
   offset: u64,
   length: u64,
   _block_size: u64,
@@ -45,13 +49,20 @@ pub async fn trim(
 /// OSX-specific trimming of a file to a sparse file
 #[cfg(target_os = "macos")]
 pub async fn trim(
-  file: &mut async_std::fs::File,
+  file: &mut fs::File,
   offset: u64,
   length: u64,
   block_size: u64,
 ) -> Result<(), Error> {
-  use async_std::io::prelude::{SeekExt, WriteExt};
-  use async_std::io::SeekFrom;
+  #[cfg(feature = "async-std")]
+  use async_std::io::{
+    prelude::{SeekExt, WriteExt},
+    SeekFrom,
+  };
+  #[cfg(feature = "tokio")]
+  use std::io::SeekFrom;
+  #[cfg(feature = "tokio")]
+  use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 
   if length == 0 {
     return Ok(());
@@ -114,11 +125,7 @@ pub async fn trim(
 /// OSX-specific punching of a hole to a file. Works only with offset and length
 /// that matches file system block boundaries.
 #[cfg(target_os = "macos")]
-fn punch_hole(
-  file: &async_std::fs::File,
-  offset: u64,
-  length: u64,
-) -> Result<(), Error> {
+fn punch_hole(file: &fs::File, offset: u64, length: u64) -> Result<(), Error> {
   // fcntl.h has this, which is not yet covered by libc:
   //
   // #define F_PUNCHHOLE 99 /* Deallocate a range of the file */

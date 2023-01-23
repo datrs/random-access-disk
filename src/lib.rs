@@ -3,13 +3,32 @@
 #![cfg_attr(feature = "nightly", doc(include = "../README.md"))]
 #![cfg_attr(test, deny(warnings))]
 
+#[cfg(not(any(feature = "async-std", feature = "tokio")))]
+compile_error!(
+  "Either feature `random-access-disk/async-std` or `random-access-disk/tokio` must be enabled."
+);
+
+#[cfg(all(feature = "async-std", feature = "tokio"))]
+compile_error!("features `random-access-disk/async-std` and `random-access-disk/tokio` are mutually exclusive");
+
 use anyhow::{anyhow, Error};
-use async_std::fs::{self, OpenOptions};
-use async_std::io::prelude::{SeekExt, WriteExt};
-use async_std::io::{ReadExt, SeekFrom};
+#[cfg(feature = "async-std")]
+use async_std::{
+  fs::{self, OpenOptions},
+  io::prelude::{SeekExt, WriteExt},
+  io::{ReadExt, SeekFrom},
+};
 use random_access_storage::RandomAccess;
 use std::ops::Drop;
 use std::path;
+
+#[cfg(feature = "tokio")]
+use std::io::SeekFrom;
+#[cfg(feature = "tokio")]
+use tokio::{
+  fs::{self, OpenOptions},
+  io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
+};
 
 #[cfg(all(
   feature = "sparse",
@@ -95,7 +114,7 @@ impl RandomAccess for RandomAccessDisk {
     offset: u64,
     data: &[u8],
   ) -> Result<(), Self::Error> {
-    let mut file = self.file.as_ref().expect("self.file was None.");
+    let file = self.file.as_mut().expect("self.file was None.");
     file.seek(SeekFrom::Start(offset)).await?;
     file.write_all(&data).await?;
     if self.auto_sync {
@@ -136,20 +155,11 @@ impl RandomAccess for RandomAccessDisk {
       );
     }
 
-    let mut file = self.file.as_ref().expect("self.file was None.");
+    let file = self.file.as_mut().expect("self.file was None.");
     let mut buffer = vec![0; length as usize];
     file.seek(SeekFrom::Start(offset)).await?;
     let _bytes_read = file.read(&mut buffer[..]).await?;
     Ok(buffer)
-  }
-
-  async fn read_to_writer(
-    &mut self,
-    _offset: u64,
-    _length: u64,
-    _buf: &mut (impl async_std::io::Write + Send),
-  ) -> Result<(), Self::Error> {
-    unimplemented!()
   }
 
   async fn del(&mut self, offset: u64, length: u64) -> Result<(), Self::Error> {
@@ -190,14 +200,30 @@ impl RandomAccess for RandomAccessDisk {
 
 impl Drop for RandomAccessDisk {
   fn drop(&mut self) {
+    // We need to flush the file on drop. Unfortunately, that is not possible to do in a
+    // non-blocking fashion, but our only other option here is losing data remaining in the
+    // write cache. Good task schedulers should be resilient to occasional blocking hiccups in
+    // file destructors so we don't expect this to be a common problem in practice.
+    // (from async_std::fs::File::drop)
+    #[cfg(feature = "async-std")]
     if let Some(file) = &self.file {
-      // We need to flush the file on drop. Unfortunately, that is not possible to do in a
-      // non-blocking fashion, but our only other option here is losing data remaining in the
-      // write cache. Good task schedulers should be resilient to occasional blocking hiccups in
-      // file destructors so we don't expect this to be a common problem in practice.
-      // (from async_std::fs::File::drop)
       let _ = async_std::task::block_on(file.sync_all());
     }
+    // For tokio, the below errors with:
+    //
+    // "Cannot start a runtime from within a runtime. This happens because a function (like
+    // `block_on`) attempted to block the current thread while the thread is being used to
+    // drive asynchronous tasks."
+    //
+    // There doesn't seem to be an equivalent block_on version for tokio that actually works
+    // in a sync drop(), so for tokio, we'll need to wait for a real AsyncDrop to arrive.
+    //
+    // #[cfg(feature = "tokio")]
+    // if let Some(file) = &self.file {
+    //   tokio::runtime::Handle::current()
+    //     .block_on(file.sync_all())
+    //     .expect("Could not sync file changes on drop.");
+    // }
   }
 }
 

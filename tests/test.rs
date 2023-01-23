@@ -3,7 +3,12 @@ use random_access_storage::RandomAccess;
 use std::io::Read;
 use tempfile::Builder;
 
-#[async_std::test]
+#[cfg(feature = "async-std")]
+use async_std::test as async_test;
+#[cfg(feature = "tokio")]
+use tokio::test as async_test;
+
+#[async_test]
 async fn can_call_new() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -14,7 +19,7 @@ async fn can_call_new() {
     .unwrap();
 }
 
-#[async_std::test]
+#[async_test]
 async fn can_open_buffer() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -26,7 +31,7 @@ async fn can_open_buffer() {
   file.write(0, b"hello").await.unwrap();
 }
 
-#[async_std::test]
+#[async_test]
 async fn can_write() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -39,7 +44,7 @@ async fn can_write() {
   file.write(5, b" world").await.unwrap();
 }
 
-#[async_std::test]
+#[async_test]
 async fn can_read() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -54,7 +59,7 @@ async fn can_read() {
   assert_eq!(String::from_utf8(text.to_vec()).unwrap(), "hello world");
 }
 
-#[async_std::test]
+#[async_test]
 async fn can_truncate_lt() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -78,7 +83,7 @@ async fn can_truncate_lt() {
   assert_eq!(c_contents, "hello w");
 }
 
-#[async_std::test]
+#[async_test]
 async fn can_truncate_gt() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -105,7 +110,7 @@ async fn can_truncate_gt() {
   assert_eq!(c_contents, "hello world\0\0\0\0");
 }
 
-#[async_std::test]
+#[async_test]
 async fn can_truncate_eq() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -129,7 +134,7 @@ async fn can_truncate_eq() {
   assert_eq!(c_contents, "hello world");
 }
 
-#[async_std::test]
+#[async_test]
 async fn can_len() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -149,7 +154,7 @@ async fn can_len() {
   assert_eq!(file.len().await.unwrap(), 8);
 }
 
-#[async_std::test]
+#[async_test]
 async fn can_is_empty() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -171,7 +176,7 @@ async fn can_is_empty() {
   assert_eq!(file.is_empty().await.unwrap(), false);
 }
 
-#[async_std::test]
+#[async_test]
 async fn explicit_no_auto_sync() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -198,7 +203,7 @@ async fn explicit_no_auto_sync() {
   assert_eq!(c_contents, "hello world");
 }
 
-#[async_std::test]
+#[async_test]
 async fn explicit_auto_sync() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -224,7 +229,7 @@ async fn explicit_auto_sync() {
   assert_eq!(c_contents, "hello world");
 }
 
-#[async_std::test]
+#[async_test]
 async fn explicit_auto_sync_with_sync_call() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -251,7 +256,7 @@ async fn explicit_auto_sync_with_sync_call() {
   assert_eq!(c_contents, "hello world");
 }
 
-#[async_std::test]
+#[async_test]
 async fn can_del_short() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -274,7 +279,7 @@ async fn can_del_short() {
   assert_eq!(String::from_utf8(people.to_vec()).unwrap(), "people");
 }
 
-#[async_std::test]
+#[async_test]
 async fn can_del_long_middle() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -319,7 +324,7 @@ async fn can_del_long_middle() {
   assert_eq!(String::from_utf8(to.to_vec()).unwrap(), "to");
 }
 
-#[async_std::test]
+#[async_test]
 async fn can_del_long_exact_block() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -340,7 +345,7 @@ async fn can_del_long_exact_block() {
   assert_eq!(zeros, vec![0; 5]);
 }
 
-#[async_std::test]
+#[async_test]
 async fn can_del_long_more_than_block() {
   let dir = Builder::new()
     .prefix("random-access-disk")

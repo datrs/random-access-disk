@@ -32,37 +32,62 @@ impl Arbitrary for Op {
 }
 
 quickcheck! {
+
+  #[cfg(feature = "async-std")]
   fn implementation_matches_model(ops: Vec<Op>) -> bool {
     async_std::task::block_on(async {
-      let dir = Builder::new().prefix("random-access-disk").tempdir().unwrap();
-
-      let mut implementation = rad::RandomAccessDisk::open(dir.path().join("1.db")).await.unwrap();
-      let mut model = vec![];
-
-      for op in ops {
-        match op {
-          Read { offset, length } => {
-            let end = offset + length;
-            if model.len() as u64 >= end {
-              assert_eq!(
-                implementation.read(offset, length).await.expect("Reads should be successful."),
-                &model[offset as usize..end as usize]
-              );
-            } else {
-              assert!(implementation.read(offset, length).await.is_err());
-            }
-          },
-          Write { offset, ref data } => {
-            let end = offset + (data.len() as u64);
-            if (model.len() as u64) < end {
-              model.resize(end as usize, 0);
-            }
-            implementation.write(offset, data).await.expect("Writes should be successful.");
-            model[offset as usize..end as usize].copy_from_slice(data);
-          },
-        }
-      }
-      true
+      assert_implementation_matches_model(ops).await
     })
   }
+
+  #[cfg(feature = "tokio")]
+  fn implementation_matches_model(ops: Vec<Op>) -> bool {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+      assert_implementation_matches_model(ops).await
+    })
+  }
+}
+
+async fn assert_implementation_matches_model(ops: Vec<Op>) -> bool {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+
+  let mut implementation = rad::RandomAccessDisk::open(dir.path().join("1.db"))
+    .await
+    .unwrap();
+  let mut model = vec![];
+
+  for op in ops {
+    match op {
+      Read { offset, length } => {
+        let end = offset + length;
+        if model.len() as u64 >= end {
+          assert_eq!(
+            implementation
+              .read(offset, length)
+              .await
+              .expect("Reads should be successful."),
+            &model[offset as usize..end as usize]
+          );
+        } else {
+          assert!(implementation.read(offset, length).await.is_err());
+        }
+      }
+      Write { offset, ref data } => {
+        let end = offset + (data.len() as u64);
+        if (model.len() as u64) < end {
+          model.resize(end as usize, 0);
+        }
+        implementation
+          .write(offset, data)
+          .await
+          .expect("Writes should be successful.");
+        model[offset as usize..end as usize].copy_from_slice(data);
+      }
+    }
+  }
+  true
 }
