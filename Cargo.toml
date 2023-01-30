@@ -14,7 +14,7 @@ anyhow = "1.0.26"
 mkdirp = "1.0.0"
 random-access-storage = { git = "https://github.com/ttiurani/random-access-storage", branch = "tokio"}
 async-std = { version = "1.12.0", optional = true }
-tokio = { version = "1.24.2", optional = true, features = ["fs", "io-util"] }
+tokio = { version = "1.25.0", optional = true, features = ["fs", "io-util"] }
 async-trait = "0.1.63"
 libc = { version = "0.2", optional = true }
 
@@ -23,7 +23,7 @@ quickcheck = "0.9.2"
 rand = "0.7.3"
 tempfile = "3.1.0"
 async-std = { version = "1.12.0", features = ["attributes"] }
-tokio = { version = "1.24.2", features = ["macros", "rt", "rt-multi-thread"] }
+tokio = { version = "1.25.0", features = ["macros", "rt", "rt-multi-thread"] }
 
 [features]
 default = ["sparse"]
