@@ -163,6 +163,18 @@ impl RandomAccess for RandomAccessDisk {
   }
 
   async fn del(&mut self, offset: u64, length: u64) -> Result<(), Self::Error> {
+    if offset >= self.length {
+      return Err(
+        anyhow!("Delete offset out of bounds. {} >= {}", offset, self.length)
+          .into(),
+      );
+    };
+
+    if length == 0 {
+      // No-op
+      return Ok(());
+    }
+
     let mut file = self.file.as_mut().expect("self.file was None.");
     trim(&mut file, offset, length, self.block_size).await?;
     if self.auto_sync {
