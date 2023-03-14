@@ -12,6 +12,11 @@ pub async fn get_length_and_block_size(
   Ok((metadata.len(), 0))
 }
 
+/// Set file to sparse, not applicable
+pub async fn set_sparse(_file: &mut fs::File) -> Result<(), Error> {
+  Ok(())
+}
+
 /// Non-sparse trimming of a file to zeros
 pub async fn trim(
   file: &mut fs::File,

@@ -14,6 +14,11 @@ pub async fn get_length_and_block_size(
   Ok((meta.len(), block_size))
 }
 
+/// Set file to sparse, not applicable in unix
+pub async fn set_sparse(_file: &mut fs::File) -> Result<(), Error> {
+  Ok(())
+}
+
 /// Linux-specific trimming to sparse files
 #[cfg(any(target_os = "linux", target_os = "android", target_os = "freebsd"))]
 pub async fn trim(

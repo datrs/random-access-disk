@@ -49,12 +49,12 @@ mod unix;
     target_os = "macos",
   )
 ))]
-use unix::{get_length_and_block_size, trim};
+use unix::{get_length_and_block_size, set_sparse, trim};
 
 #[cfg(all(feature = "sparse", windows))]
 mod windows;
 #[cfg(all(feature = "sparse", windows))]
-use windows::{get_length_and_block_size, trim};
+use windows::{get_length_and_block_size, set_sparse, trim};
 
 #[cfg(not(all(
   feature = "sparse",
@@ -78,7 +78,7 @@ mod default;
     windows,
   )
 )))]
-use default::{get_length_and_block_size, trim};
+use default::{get_length_and_block_size, set_sparse, trim};
 
 /// Main constructor.
 #[derive(Debug)]
@@ -260,13 +260,15 @@ impl Builder {
     if let Some(dirname) = self.filename.parent() {
       mkdirp::mkdirp(&dirname)?;
     }
-    let file = OpenOptions::new()
+    let mut file = OpenOptions::new()
       .create(true)
       .read(true)
       .write(true)
       .open(&self.filename)
       .await?;
     file.sync_all().await?;
+
+    set_sparse(&mut file).await?;
 
     let (length, block_size) = get_length_and_block_size(&file).await?;
     Ok(RandomAccessDisk {
