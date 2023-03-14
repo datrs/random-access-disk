@@ -98,7 +98,9 @@ async fn assert_implementation_matches_model(ops: Vec<Op>) -> bool {
         } else {
           model.len() as u64
         };
-        if model.len() > offset as usize {
+        if model.len() > offset as usize
+          || (model.len() == offset as usize && length == 0)
+        {
           implementation
             .del(offset, length)
             .await

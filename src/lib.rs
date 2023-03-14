@@ -163,7 +163,7 @@ impl RandomAccess for RandomAccessDisk {
   }
 
   async fn del(&mut self, offset: u64, length: u64) -> Result<(), Self::Error> {
-    if offset >= self.length {
+    if offset > self.length || (offset == self.length && length > 0) {
       return Err(
         anyhow!("Delete offset out of bounds. {} >= {}", offset, self.length)
           .into(),
