@@ -93,19 +93,16 @@ async fn assert_implementation_matches_model(ops: Vec<Op>) -> bool {
         model[offset as usize..end as usize].copy_from_slice(data);
       }
       Delete { offset, length } => {
-        let end = if offset + length <= model.len() as u64 {
-          offset + length
-        } else {
-          model.len() as u64
-        };
-        if model.len() > offset as usize
-          || (model.len() == offset as usize && length == 0)
-        {
+        if model.len() >= offset as usize {
           implementation
             .del(offset, length)
             .await
             .expect("Deletes should be successful.");
-          model[offset as usize..end as usize].fill(0);
+          if offset + length < model.len() as u64 {
+            model[offset as usize..(offset + length) as usize].fill(0);
+          } else {
+            model.resize(offset as usize, 0);
+          };
         } else {
           assert!(implementation.del(offset, length).await.is_err());
         }

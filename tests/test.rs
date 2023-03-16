@@ -336,13 +336,15 @@ async fn can_del_long_exact_block() {
     .await
     .unwrap();
   const BLOCK_LEN: usize = 4096;
-  let block = &[0x61 as u8; BLOCK_LEN];
+  let block = &[0x61 as u8; BLOCK_LEN + 1];
   file.write(0, block).await.unwrap();
   file.del(0, BLOCK_LEN as u64).await.unwrap();
   let zeros = file.read(0, 5).await.unwrap();
   assert_eq!(zeros, vec![0; 5]);
   let zeros = file.read(BLOCK_LEN as u64 - 5, 5).await.unwrap();
   assert_eq!(zeros, vec![0; 5]);
+  file.del(0, (BLOCK_LEN + 1) as u64).await.unwrap();
+  assert_eq!(0, file.len().await.unwrap());
 }
 
 #[async_test]
@@ -358,23 +360,25 @@ async fn can_del_long_more_than_block() {
     .unwrap();
   file.write(0, b"hello").await.unwrap();
   const MORE_THAN_BLOCK_LEN: usize = 4096 + 1000;
-  let more_than_block = &[0x61 as u8; MORE_THAN_BLOCK_LEN];
+  let more_than_block = &[0x61 as u8; MORE_THAN_BLOCK_LEN + 1];
   file.write(5, more_than_block).await.unwrap();
   file.del(5, MORE_THAN_BLOCK_LEN as u64).await.unwrap();
   let zeros = file.read(5, 5).await.unwrap();
   assert_eq!(zeros, vec![0; 5]);
-  let zeros = file.read(MORE_THAN_BLOCK_LEN as u64 - 5, 5).await.unwrap();
+  let zeros = file.read(MORE_THAN_BLOCK_LEN as u64, 5).await.unwrap();
   assert_eq!(zeros, vec![0; 5]);
 
   const EXACT_TO_THIRD_BLOCK_LEN: usize = 4096 * 2 - 5;
-  let exact_to_third_block = &[0x61 as u8; EXACT_TO_THIRD_BLOCK_LEN];
+  let exact_to_third_block = &[0x61 as u8; EXACT_TO_THIRD_BLOCK_LEN + 1];
   file.write(5, exact_to_third_block).await.unwrap();
   file.del(5, EXACT_TO_THIRD_BLOCK_LEN as u64).await.unwrap();
   let zeros = file.read(5, 5).await.unwrap();
   assert_eq!(zeros, vec![0; 5]);
-  let zeros = file
-    .read(EXACT_TO_THIRD_BLOCK_LEN as u64 - 5, 5)
+  let zeros = file.read(EXACT_TO_THIRD_BLOCK_LEN as u64, 5).await.unwrap();
+  assert_eq!(zeros, vec![0; 5]);
+  file
+    .del(5, (EXACT_TO_THIRD_BLOCK_LEN * 2) as u64)
     .await
     .unwrap();
-  assert_eq!(zeros, vec![0; 5]);
+  assert_eq!(5, file.len().await.unwrap());
 }
