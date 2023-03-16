@@ -256,6 +256,10 @@ impl Builder {
       auto_sync: true,
     }
   }
+
+  // NB: Because of no AsyncDrop, tokio can not ensure that changes are synced when dropped,
+  // see impl Drop above.
+  #[cfg(feature = "async-std")]
   pub fn auto_sync(mut self, auto_sync: bool) -> Self {
     self.auto_sync = auto_sync;
     self

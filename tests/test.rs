@@ -177,6 +177,7 @@ async fn can_is_empty() {
 }
 
 #[async_test]
+#[cfg(feature = "async-std")]
 async fn explicit_no_auto_sync() {
   let dir = Builder::new()
     .prefix("random-access-disk")
@@ -204,13 +205,12 @@ async fn explicit_no_auto_sync() {
 }
 
 #[async_test]
-async fn explicit_auto_sync() {
+async fn auto_sync() {
   let dir = Builder::new()
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
   let mut file = rad::RandomAccessDisk::builder(dir.path().join("11.db"))
-    .auto_sync(true)
     .build()
     .await
     .unwrap();
@@ -230,13 +230,12 @@ async fn explicit_auto_sync() {
 }
 
 #[async_test]
-async fn explicit_auto_sync_with_sync_call() {
+async fn auto_sync_with_sync_call() {
   let dir = Builder::new()
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
   let mut file = rad::RandomAccessDisk::builder(dir.path().join("12.db"))
-    .auto_sync(true)
     .build()
     .await
     .unwrap();
@@ -263,7 +262,6 @@ async fn can_del_short() {
     .tempdir()
     .unwrap();
   let mut file = rad::RandomAccessDisk::builder(dir.path().join("13.db"))
-    .auto_sync(true)
     .build()
     .await
     .unwrap();
@@ -286,7 +284,6 @@ async fn can_del_long_middle() {
     .tempdir()
     .unwrap();
   let mut file = rad::RandomAccessDisk::builder(dir.path().join("14.db"))
-    .auto_sync(true)
     .build()
     .await
     .unwrap();
@@ -331,7 +328,6 @@ async fn can_del_long_exact_block() {
     .tempdir()
     .unwrap();
   let mut file = rad::RandomAccessDisk::builder(dir.path().join("15.db"))
-    .auto_sync(true)
     .build()
     .await
     .unwrap();
@@ -354,7 +350,6 @@ async fn can_del_long_more_than_block() {
     .tempdir()
     .unwrap();
   let mut file = rad::RandomAccessDisk::builder(dir.path().join("16.db"))
-    .auto_sync(true)
     .build()
     .await
     .unwrap();
