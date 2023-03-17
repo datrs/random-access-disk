@@ -1,4 +1,4 @@
-use anyhow::Error;
+use random_access_storage::RandomAccessError;
 #[cfg(feature = "async-std")]
 use async_std::fs;
 #[cfg(feature = "tokio")]
@@ -7,13 +7,13 @@ use tokio::fs;
 /// Get file length and file system block size
 pub async fn get_length_and_block_size(
   file: &fs::File,
-) -> Result<(u64, u64), Error> {
+) -> Result<(u64, u64), RandomAccessError> {
   let metadata = file.metadata().await?;
   Ok((metadata.len(), 0))
 }
 
 /// Set file to sparse, not applicable
-pub async fn set_sparse(_file: &mut fs::File) -> Result<(), Error> {
+pub async fn set_sparse(_file: &mut fs::File) -> Result<(), RandomAccessError> {
   Ok(())
 }
 
@@ -23,7 +23,7 @@ pub async fn trim(
   offset: u64,
   length: u64,
   _block_size: u64,
-) -> Result<(), Error> {
+) -> Result<(), RandomAccessError> {
   #[cfg(feature = "async-std")]
   use async_std::io::{
     prelude::{SeekExt, WriteExt},

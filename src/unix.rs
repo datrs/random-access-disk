@@ -1,13 +1,13 @@
-use anyhow::{anyhow, Error};
 #[cfg(feature = "async-std")]
 use async_std::fs;
+use random_access_storage::RandomAccessError;
 #[cfg(feature = "tokio")]
 use tokio::fs;
 
 /// Get unix file length and file system block size
 pub async fn get_length_and_block_size(
   file: &fs::File,
-) -> Result<(u64, u64), Error> {
+) -> Result<(u64, u64), RandomAccessError> {
   use std::os::unix::fs::MetadataExt;
   let meta = file.metadata().await?;
   let block_size = meta.blksize();
@@ -15,7 +15,7 @@ pub async fn get_length_and_block_size(
 }
 
 /// Set file to sparse, not applicable in unix
-pub async fn set_sparse(_file: &mut fs::File) -> Result<(), Error> {
+pub async fn set_sparse(_file: &mut fs::File) -> Result<(), RandomAccessError> {
   Ok(())
 }
 
@@ -26,7 +26,7 @@ pub async fn trim(
   offset: u64,
   length: u64,
   _block_size: u64,
-) -> Result<(), Error> {
+) -> Result<(), RandomAccessError> {
   use libc::{fallocate, FALLOC_FL_KEEP_SIZE, FALLOC_FL_PUNCH_HOLE};
   use std::os::unix::io::AsRawFd;
 
@@ -40,11 +40,11 @@ pub async fn trim(
     );
 
     if ret < 0 {
-      return Err(anyhow!(
-        "Failed to punch hole to file on linux with return {} and OS error {}",
-        ret,
-        std::io::Error::last_os_error().to_string()
-      ));
+      return Err(RandomAccessError::IO {
+        context: Some("Failed to punch hole to file on linux".to_string()),
+        return_code: Some(ret),
+        source: std::io::Error::last_os_error(),
+      });
     }
   }
 
@@ -58,7 +58,7 @@ pub async fn trim(
   offset: u64,
   length: u64,
   block_size: u64,
-) -> Result<(), Error> {
+) -> Result<(), RandomAccessError> {
   #[cfg(feature = "async-std")]
   use async_std::io::{
     prelude::{SeekExt, WriteExt},
@@ -130,7 +130,11 @@ pub async fn trim(
 /// OSX-specific punching of a hole to a file. Works only with offset and length
 /// that matches file system block boundaries.
 #[cfg(target_os = "macos")]
-fn punch_hole(file: &fs::File, offset: u64, length: u64) -> Result<(), Error> {
+fn punch_hole(
+  file: &fs::File,
+  offset: u64,
+  length: u64,
+) -> Result<(), RandomAccessError> {
   // fcntl.h has this, which is not yet covered by libc:
   //
   // #define F_PUNCHHOLE 99 /* Deallocate a range of the file */
@@ -174,11 +178,11 @@ fn punch_hole(file: &fs::File, offset: u64, length: u64) -> Result<(), Error> {
   unsafe {
     let ret = libc::fcntl(fd, F_PUNCHHOLE, &hole);
     if ret < 0 {
-      return Err(anyhow!(
-        "Failed to punch hole to file on macos with return {} and OS error {}",
-        ret,
-        std::io::Error::last_os_error().to_string()
-      ));
+      return Err(RandomAccessError::IO {
+        context: Some("Failed to punch hole to file on macos".to_string()),
+        return_code: Some(ret),
+        source: std::io::Error::last_os_error(),
+      });
     }
   }
 

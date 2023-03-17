@@ -11,14 +11,13 @@ compile_error!(
 #[cfg(all(feature = "async-std", feature = "tokio"))]
 compile_error!("features `random-access-disk/async-std` and `random-access-disk/tokio` are mutually exclusive");
 
-use anyhow::{anyhow, Error};
 #[cfg(feature = "async-std")]
 use async_std::{
   fs::{self, OpenOptions},
   io::prelude::{SeekExt, WriteExt},
   io::{ReadExt, SeekFrom},
 };
-use random_access_storage::RandomAccess;
+use random_access_storage::{RandomAccess, RandomAccessError};
 use std::ops::Drop;
 use std::path;
 
@@ -96,7 +95,7 @@ impl RandomAccessDisk {
   #[allow(clippy::new_ret_no_self)]
   pub async fn open(
     filename: path::PathBuf,
-  ) -> Result<RandomAccessDisk, Error> {
+  ) -> Result<RandomAccessDisk, RandomAccessError> {
     Self::builder(filename).build().await
   }
 
@@ -107,13 +106,11 @@ impl RandomAccessDisk {
 
 #[async_trait::async_trait]
 impl RandomAccess for RandomAccessDisk {
-  type Error = Box<dyn std::error::Error + Sync + Send>;
-
   async fn write(
     &mut self,
     offset: u64,
     data: &[u8],
-  ) -> Result<(), Self::Error> {
+  ) -> Result<(), RandomAccessError> {
     let file = self.file.as_mut().expect("self.file was None.");
     file.seek(SeekFrom::Start(offset)).await?;
     file.write_all(&data).await?;
@@ -142,17 +139,13 @@ impl RandomAccess for RandomAccessDisk {
     &mut self,
     offset: u64,
     length: u64,
-  ) -> Result<Vec<u8>, Self::Error> {
+  ) -> Result<Vec<u8>, RandomAccessError> {
     if (offset + length) as u64 > self.length {
-      return Err(
-        anyhow!(
-          "Read bounds exceeded. {} < {}..{}",
-          self.length,
-          offset,
-          offset + length
-        )
-        .into(),
-      );
+      return Err(RandomAccessError::RangeOutOfBounds {
+        start: offset,
+        end: offset + length,
+        length: self.length,
+      });
     }
 
     let file = self.file.as_mut().expect("self.file was None.");
@@ -162,12 +155,16 @@ impl RandomAccess for RandomAccessDisk {
     Ok(buffer)
   }
 
-  async fn del(&mut self, offset: u64, length: u64) -> Result<(), Self::Error> {
+  async fn del(
+    &mut self,
+    offset: u64,
+    length: u64,
+  ) -> Result<(), RandomAccessError> {
     if offset > self.length {
-      return Err(
-        anyhow!("Delete offset out of bounds. {} > {}", offset, self.length,)
-          .into(),
-      );
+      return Err(RandomAccessError::OffsetOutOfBounds {
+        offset,
+        length: self.length,
+      });
     };
 
     if length == 0 {
@@ -188,7 +185,7 @@ impl RandomAccess for RandomAccessDisk {
     Ok(())
   }
 
-  async fn truncate(&mut self, length: u64) -> Result<(), Self::Error> {
+  async fn truncate(&mut self, length: u64) -> Result<(), RandomAccessError> {
     let file = self.file.as_ref().expect("self.file was None.");
     self.length = length as u64;
     file.set_len(self.length).await?;
@@ -198,15 +195,15 @@ impl RandomAccess for RandomAccessDisk {
     Ok(())
   }
 
-  async fn len(&mut self) -> Result<u64, Self::Error> {
+  async fn len(&mut self) -> Result<u64, RandomAccessError> {
     Ok(self.length)
   }
 
-  async fn is_empty(&mut self) -> Result<bool, Self::Error> {
+  async fn is_empty(&mut self) -> Result<bool, RandomAccessError> {
     Ok(self.length == 0)
   }
 
-  async fn sync_all(&mut self) -> Result<(), Self::Error> {
+  async fn sync_all(&mut self) -> Result<(), RandomAccessError> {
     if !self.auto_sync {
       let file = self.file.as_ref().expect("self.file was None.");
       file.sync_all().await?;
@@ -265,7 +262,7 @@ impl Builder {
     self
   }
 
-  pub async fn build(self) -> Result<RandomAccessDisk, Error> {
+  pub async fn build(self) -> Result<RandomAccessDisk, RandomAccessError> {
     if let Some(dirname) = self.filename.parent() {
       mkdirp::mkdirp(&dirname)?;
     }

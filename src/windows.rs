@@ -1,6 +1,6 @@
 use std::os::windows::prelude::{AsRawHandle, RawHandle};
+use random_access_storage::RandomAccessError;
 
-use anyhow::Error;
 use winapi::shared::minwindef::{DWORD, LPVOID};
 use winapi::um::ioapiset::DeviceIoControl;
 use winapi::um::winioctl::FSCTL_SET_SPARSE;
@@ -13,13 +13,13 @@ use tokio::fs;
 
 pub async fn get_length_and_block_size(
   file: &fs::File,
-) -> Result<(u64, u64), Error> {
+) -> Result<(u64, u64), RandomAccessError> {
   let meta = file.metadata().await?;
   Ok((meta.len(), 0))
 }
 
 /// Set file to sparse
-pub async fn set_sparse(file: &mut fs::File) -> Result<(), Error> {
+pub async fn set_sparse(file: &mut fs::File) -> Result<(), RandomAccessError> {
   unsafe {
     device_io_control(
       file.as_raw_handle(),
@@ -39,7 +39,7 @@ pub async fn trim(
   offset: u64,
   length: u64,
   _block_size: u64,
-) -> Result<(), Error> {
+) -> Result<(), RandomAccessError> {
   unsafe {
     device_io_control(
       file.as_raw_handle(),
@@ -68,7 +68,7 @@ unsafe fn device_io_control<Q: Sized, R: Sized>(
   query: &Q,
   result: *mut R,
   capacity: usize,
-) -> Result<usize, std::io::Error> {
+) -> Result<usize, RandomAccessError> {
   let mut returned_bytes: DWORD = 0;
 
   let ret = DeviceIoControl(
@@ -83,7 +83,11 @@ unsafe fn device_io_control<Q: Sized, R: Sized>(
   );
 
   if ret == 0 {
-    return Err(std::io::Error::last_os_error().into());
+    return Err(RandomAccessError::IO {
+      context: Some("DeviceIoControl failed on windows".to_string()),
+      return_code: Some(ret),
+      source: std::io::Error::last_os_error(),
+    });
   }
 
   Ok(returned_bytes as usize)
