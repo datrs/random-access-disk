@@ -141,9 +141,9 @@ impl RandomAccess for RandomAccessDisk {
     length: u64,
   ) -> Result<Vec<u8>, RandomAccessError> {
     if (offset + length) as u64 > self.length {
-      return Err(RandomAccessError::RangeOutOfBounds {
-        start: offset,
-        end: offset + length,
+      return Err(RandomAccessError::OutOfBounds {
+        offset,
+        end: Some(offset + length),
         length: self.length,
       });
     }
@@ -161,8 +161,9 @@ impl RandomAccess for RandomAccessDisk {
     length: u64,
   ) -> Result<(), RandomAccessError> {
     if offset > self.length {
-      return Err(RandomAccessError::OffsetOutOfBounds {
+      return Err(RandomAccessError::OutOfBounds {
         offset,
+        end: None,
         length: self.length,
       });
     };
