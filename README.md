@@ -2,24 +2,15 @@
 [![crates.io version][1]][2] [![build status][3]][4]
 [![downloads][5]][6] [![docs.rs docs][7]][8]
 
-Continuously read,write to disk, using random offsets and lengths. Adapted from
-[random-access-storage/random-access-file](https://github.com/random-access-storage/random-access-file/).
+Continuously read and write to disk, using random offsets and lengths,
+using abstract interface defined in
+[random-access-storage](https://github.com/datrs/random-access-storage).
+
+Adapted from Javascript
+[random-access-file](https://github.com/random-access-storage/random-access-file/).
 
 - [Documentation][8]
 - [Crate][2]
-
-## Usage
-```rust
-use std::path::PathBuf;
-use tempdir::TempDir;
-
-let dir = TempDir::new("random-access-disk").unwrap();
-let mut file = random_access_disk::RandomAccessDisk::new(dir.path().join("README.db"));
-
-file.write(0, b"hello").await.unwrap();
-file.write(5, b" world").await.unwrap();
-let _text = file.read(0, 11).await.unwrap();
-```
 
 ## Installation
 ```sh

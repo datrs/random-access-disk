@@ -1,7 +1,101 @@
-#![cfg_attr(feature = "nightly", deny(missing_docs))]
-#![cfg_attr(feature = "nightly", feature(external_doc))]
-#![cfg_attr(feature = "nightly", doc(include = "../README.md"))]
+#![forbid(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
+#![doc(test(attr(deny(warnings))))]
+
+//! # Continuously read and write to disk, using random offsets and lengths
+//! [RandomAccessDisk] is a complete implementation of [random-access-storage](https://docs.rs/random-access-storage)
+//! for in-memory storage.
+//!
+//! See also [random-access-memory](https://docs.rs/random-access-memory) for in-memory storage
+//! that can be swapped with this.
+//!
+//! ## Features
+//!
+//! ### `sparse`
+//!
+//! Deleting may create sparse files, on by default. Creation of sparse files is tested on OSX, linux and Windows.
+//!
+//! **NB**: If this is on, `unsafe` code is used to make direct platform-specific calls!
+//!
+//! ### `tokio`
+//!
+//! Use the tokio runtime. Either this or `async_std` is mandatory.
+//!
+//! ### `async-std`
+//!
+//! Use the async-std runtime. Either this or `tokio` is mandatory.
+//!
+//! ## Examples
+//!
+//! Reading, writing, deleting and truncating:
+//!
+//! ```
+//! # #[cfg(feature = "tokio")]
+//! # tokio_test::block_on(async {
+//! # example().await;
+//! # });
+//! # #[cfg(feature = "async-std")]
+//! # async_std::task::block_on(async {
+//! # example().await;
+//! # });
+//! # async fn example() {
+//! use random_access_storage::RandomAccess;
+//! use random_access_disk::RandomAccessDisk;
+//!
+//! let path = tempfile::Builder::new().prefix("basic").tempfile().unwrap().into_temp_path();
+//! let mut storage = RandomAccessDisk::open(path.to_path_buf()).await.unwrap();
+//! storage.write(0, b"hello").await.unwrap();
+//! storage.write(5, b" world").await.unwrap();
+//! assert_eq!(storage.read(0, 11).await.unwrap(), b"hello world");
+//! assert_eq!(storage.len().await.unwrap(), 11);
+//! storage.del(5, 2).await.unwrap();
+//! assert_eq!(storage.read(5, 2).await.unwrap(), [0, 0]);
+//! assert_eq!(storage.len().await.unwrap(), 11);
+//! storage.truncate(2).await.unwrap();
+//! assert_eq!(storage.len().await.unwrap(), 2);
+//! storage.truncate(5).await.unwrap();
+//! assert_eq!(storage.len().await.unwrap(), 5);
+//! assert_eq!(storage.read(0, 5).await.unwrap(), [b'h', b'e', 0, 0, 0]);
+//! # }
+//! ```
+//!
+//! In order to get benefits from the swappable interface, you will
+//! in most cases want to use generic functions for storage manipulation:
+//!
+//! ```
+//! # #[cfg(feature = "tokio")]
+//! # tokio_test::block_on(async {
+//! # example().await;
+//! # });
+//! # #[cfg(feature = "async-std")]
+//! # async_std::task::block_on(async {
+//! # example().await;
+//! # });
+//! # async fn example() {
+//! use random_access_storage::RandomAccess;
+//! use random_access_disk::RandomAccessDisk;
+//! use std::fmt::Debug;
+//!
+//! let path = tempfile::Builder::new().prefix("swappable").tempfile().unwrap().into_temp_path();
+//! let mut storage = RandomAccessDisk::open(path.to_path_buf()).await.unwrap();
+//! write_hello_world(&mut storage).await;
+//! assert_eq!(read_hello_world(&mut storage).await, b"hello world");
+//!
+//! /// Write with swappable storage
+//! async fn write_hello_world<T>(storage: &mut T)
+//! where T: RandomAccess + Debug + Send,
+//! {
+//!   storage.write(0, b"hello").await.unwrap();
+//!   storage.write(5, b" world").await.unwrap();
+//! }
+//!
+//! /// Read with swappable storage
+//! async fn read_hello_world<T>(storage: &mut T) -> Vec<u8>
+//! where T: RandomAccess + Debug + Send,
+//! {
+//!   storage.read(0, 11).await.unwrap()
+//! }
+//! # }
 
 #[cfg(not(any(feature = "async-std", feature = "tokio")))]
 compile_error!(
@@ -91,7 +185,7 @@ pub struct RandomAccessDisk {
 }
 
 impl RandomAccessDisk {
-  /// Create a new instance.
+  /// Create a new (auto-sync) instance to storage at `filename`.
   #[allow(clippy::new_ret_no_self)]
   pub async fn open(
     filename: path::PathBuf,
@@ -99,6 +193,7 @@ impl RandomAccessDisk {
     Self::builder(filename).build().await
   }
 
+  /// Initialize a builder with storage at `filename`.
   pub fn builder(filename: path::PathBuf) -> Builder {
     Builder::new(filename)
   }
@@ -242,12 +337,14 @@ impl Drop for RandomAccessDisk {
   }
 }
 
+/// Builder for [RandomAccessDisk]
 pub struct Builder {
   filename: path::PathBuf,
   auto_sync: bool,
 }
 
 impl Builder {
+  /// Create new builder at `path` (with auto-sync true by default).
   pub fn new(filename: path::PathBuf) -> Self {
     Self {
       filename,
@@ -255,6 +352,7 @@ impl Builder {
     }
   }
 
+  /// Set auto-sync
   // NB: Because of no AsyncDrop, tokio can not ensure that changes are synced when dropped,
   // see impl Drop above.
   #[cfg(feature = "async-std")]
@@ -263,6 +361,7 @@ impl Builder {
     self
   }
 
+  /// Build a [RandomAccessDisk] instance
   pub async fn build(self) -> Result<RandomAccessDisk, RandomAccessError> {
     if let Some(dirname) = self.filename.parent() {
       mkdirp::mkdirp(&dirname)?;
