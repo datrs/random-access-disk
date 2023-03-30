@@ -1,6 +1,6 @@
-use random_access_storage::RandomAccessError;
 #[cfg(feature = "async-std")]
 use async_std::fs;
+use random_access_storage::RandomAccessError;
 #[cfg(feature = "tokio")]
 use tokio::fs;
 
@@ -34,7 +34,7 @@ pub async fn trim(
   #[cfg(feature = "tokio")]
   use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 
-  let data = vec![0 as u8; length as usize];
+  let data = vec![0_u8; length as usize];
   file.seek(SeekFrom::Start(offset)).await?;
   file.write_all(&data).await?;
   Ok(())

@@ -95,7 +95,7 @@ pub async fn trim(
 
   if initial_zero_length > 0 {
     // Needs zeroing
-    let data = vec![0 as u8; initial_zero_length as usize];
+    let data = vec![0_u8; initial_zero_length as usize];
     file.seek(SeekFrom::Start(offset)).await?;
     file.write_all(&data).await?;
     if initial_zero_length == length {
@@ -119,7 +119,7 @@ pub async fn trim(
 
   if last_block_offset < end {
     // Needs zeroing of the last block
-    let data = vec![0 as u8; (end - last_block_offset) as usize];
+    let data = vec![0_u8; (end - last_block_offset) as usize];
     file.seek(SeekFrom::Start(last_block_offset)).await?;
     file.write_all(&data).await?;
   }

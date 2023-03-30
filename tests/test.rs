@@ -73,9 +73,8 @@ async fn can_truncate_lt() {
   file.truncate(7).await.unwrap();
   let text = file.read(0, 7).await.unwrap();
   assert_eq!(String::from_utf8(text.to_vec()).unwrap(), "hello w");
-  match file.read(0, 8).await {
-    Ok(_) => panic!("file is too big. read past the end should have failed"),
-    _ => {}
+  if file.read(0, 8).await.is_ok() {
+    panic!("file is too big. read past the end should have failed");
   };
   let mut c_file = std::fs::File::open(dir.path().join("5.db")).unwrap();
   let mut c_contents = String::new();
@@ -100,9 +99,8 @@ async fn can_truncate_gt() {
     String::from_utf8(text.to_vec()).unwrap(),
     "hello world\0\0\0\0"
   );
-  match file.read(0, 16).await {
-    Ok(_) => panic!("file is too big. read past the end should have failed"),
-    _ => {}
+  if file.read(0, 16).await.is_ok() {
+    panic!("file is too big. read past the end should have failed");
   };
   let mut c_file = std::fs::File::open(dir.path().join("6.db")).unwrap();
   let mut c_contents = String::new();
@@ -124,9 +122,8 @@ async fn can_truncate_eq() {
   file.truncate(11).await.unwrap();
   let text = file.read(0, 11).await.unwrap();
   assert_eq!(String::from_utf8(text.to_vec()).unwrap(), "hello world");
-  match file.read(0, 12).await {
-    Ok(_) => panic!("file is too big. read past the end should have failed"),
-    _ => {}
+  if file.read(0, 12).await.is_ok() {
+    panic!("file is too big. read past the end should have failed");
   };
   let mut c_file = std::fs::File::open(dir.path().join("7.db")).unwrap();
   let mut c_contents = String::new();
@@ -163,17 +160,17 @@ async fn can_is_empty() {
   let mut file = rad::RandomAccessDisk::open(dir.path().join("9.db"))
     .await
     .unwrap();
-  assert_eq!(file.is_empty().await.unwrap(), true);
+  assert!(file.is_empty().await.unwrap());
   file.write(0, b"hello").await.unwrap();
-  assert_eq!(file.is_empty().await.unwrap(), false);
+  assert!(!file.is_empty().await.unwrap());
   file.truncate(0).await.unwrap();
-  assert_eq!(file.is_empty().await.unwrap(), true);
+  assert!(file.is_empty().await.unwrap());
   file.truncate(1).await.unwrap();
-  assert_eq!(file.is_empty().await.unwrap(), false);
+  assert!(!file.is_empty().await.unwrap());
   file.truncate(0).await.unwrap();
-  assert_eq!(file.is_empty().await.unwrap(), true);
+  assert!(file.is_empty().await.unwrap());
   file.write(0, b"what").await.unwrap();
-  assert_eq!(file.is_empty().await.unwrap(), false);
+  assert!(!file.is_empty().await.unwrap());
 }
 
 #[async_test]
@@ -194,9 +191,8 @@ async fn explicit_no_auto_sync() {
   file.sync_all().await.unwrap();
   let text = file.read(0, 11).await.unwrap();
   assert_eq!(String::from_utf8(text.to_vec()).unwrap(), "hello world");
-  match file.read(0, 12).await {
-    Ok(_) => panic!("file is too big. read past the end should have failed"),
-    _ => {}
+  if file.read(0, 12).await.is_ok() {
+    panic!("file is too big. read past the end should have failed");
   };
   let mut c_file = std::fs::File::open(dir.path().join("10.db")).unwrap();
   let mut c_contents = String::new();
@@ -219,9 +215,8 @@ async fn auto_sync() {
   file.truncate(11).await.unwrap();
   let text = file.read(0, 11).await.unwrap();
   assert_eq!(String::from_utf8(text.to_vec()).unwrap(), "hello world");
-  match file.read(0, 12).await {
-    Ok(_) => panic!("file is too big. read past the end should have failed"),
-    _ => {}
+  if file.read(0, 12).await.is_ok() {
+    panic!("file is too big. read past the end should have failed");
   };
   let mut c_file = std::fs::File::open(dir.path().join("11.db")).unwrap();
   let mut c_contents = String::new();
@@ -245,9 +240,8 @@ async fn auto_sync_with_sync_call() {
   file.sync_all().await.unwrap();
   let text = file.read(0, 11).await.unwrap();
   assert_eq!(String::from_utf8(text.to_vec()).unwrap(), "hello world");
-  match file.read(0, 12).await {
-    Ok(_) => panic!("file is too big. read past the end should have failed"),
-    _ => {}
+  if file.read(0, 12).await.is_ok() {
+    panic!("file is too big. read past the end should have failed");
   };
   let mut c_file = std::fs::File::open(dir.path().join("12.db")).unwrap();
   let mut c_contents = String::new();
@@ -289,7 +283,7 @@ async fn can_del_long_middle() {
     .unwrap();
   file.write(0, b"hello").await.unwrap();
   const MULTI_BLOCK_LEN: usize = 4096 * 3;
-  let multi_block = &[0x61 as u8; MULTI_BLOCK_LEN];
+  let multi_block = &[0x61_u8; MULTI_BLOCK_LEN];
   file.write(5, multi_block).await.unwrap();
   file
     .write((MULTI_BLOCK_LEN + 5) as u64, b"to all the ")
@@ -332,7 +326,7 @@ async fn can_del_long_exact_block() {
     .await
     .unwrap();
   const BLOCK_LEN: usize = 4096;
-  let block = &[0x61 as u8; BLOCK_LEN + 1];
+  let block = &[0x61_u8; BLOCK_LEN + 1];
   file.write(0, block).await.unwrap();
   file.del(0, BLOCK_LEN as u64).await.unwrap();
   let zeros = file.read(0, 5).await.unwrap();
@@ -355,7 +349,7 @@ async fn can_del_long_more_than_block() {
     .unwrap();
   file.write(0, b"hello").await.unwrap();
   const MORE_THAN_BLOCK_LEN: usize = 4096 + 1000;
-  let more_than_block = &[0x61 as u8; MORE_THAN_BLOCK_LEN + 1];
+  let more_than_block = &[0x61_u8; MORE_THAN_BLOCK_LEN + 1];
   file.write(5, more_than_block).await.unwrap();
   file.del(5, MORE_THAN_BLOCK_LEN as u64).await.unwrap();
   let zeros = file.read(5, 5).await.unwrap();
@@ -364,7 +358,7 @@ async fn can_del_long_more_than_block() {
   assert_eq!(zeros, vec![0; 5]);
 
   const EXACT_TO_THIRD_BLOCK_LEN: usize = 4096 * 2 - 5;
-  let exact_to_third_block = &[0x61 as u8; EXACT_TO_THIRD_BLOCK_LEN + 1];
+  let exact_to_third_block = &[0x61_u8; EXACT_TO_THIRD_BLOCK_LEN + 1];
   file.write(5, exact_to_third_block).await.unwrap();
   file.del(5, EXACT_TO_THIRD_BLOCK_LEN as u64).await.unwrap();
   let zeros = file.read(5, 5).await.unwrap();

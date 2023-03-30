@@ -10,17 +10,16 @@ use criterion::async_executor::AsyncStdExecutor;
 fn bench_write_hello_world(c: &mut Criterion) {
   #[cfg(feature = "async-std")]
   c.bench_function("write hello world", |b| {
-    b.to_async(AsyncStdExecutor)
-      .iter_custom(|iters| write_hello_world(iters));
+    b.to_async(AsyncStdExecutor).iter_custom(write_hello_world);
   });
   #[cfg(feature = "tokio")]
   c.bench_function("write hello world", |b| {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    b.to_async(&rt)
-      .iter_custom(|iters| write_hello_world(iters));
+    b.to_async(&rt).iter_custom(write_hello_world);
   });
 }
 
+#[allow(clippy::unit_arg)]
 async fn write_hello_world(iters: u64) -> Duration {
   let mut file = create_file("1.db").await;
   let start = Instant::now();
@@ -39,16 +38,16 @@ async fn write_hello_world(iters: u64) -> Duration {
 fn bench_read_hello_world(c: &mut Criterion) {
   #[cfg(feature = "async-std")]
   c.bench_function("read hello world", |b| {
-    b.to_async(AsyncStdExecutor)
-      .iter_custom(|iters| read_hello_world(iters));
+    b.to_async(AsyncStdExecutor).iter_custom(read_hello_world);
   });
   #[cfg(feature = "tokio")]
   c.bench_function("read hello world", |b| {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    b.to_async(&rt).iter_custom(|iters| read_hello_world(iters));
+    b.to_async(&rt).iter_custom(read_hello_world);
   });
 }
 
+#[allow(clippy::unit_arg)]
 async fn read_hello_world(iters: u64) -> Duration {
   let mut file = create_file("2.db").await;
   file.write(0, b"hello").await.unwrap();
@@ -69,16 +68,16 @@ fn bench_read_write_hello_world(c: &mut Criterion) {
   #[cfg(feature = "async-std")]
   c.bench_function("read/write hello world", |b| {
     b.to_async(AsyncStdExecutor)
-      .iter_custom(|iters| read_write_hello_world(iters));
+      .iter_custom(read_write_hello_world);
   });
   #[cfg(feature = "tokio")]
   c.bench_function("read/write hello world", |b| {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    b.to_async(&rt)
-      .iter_custom(|iters| read_write_hello_world(iters));
+    b.to_async(&rt).iter_custom(read_write_hello_world);
   });
 }
 
+#[allow(clippy::unit_arg)]
 async fn read_write_hello_world(iters: u64) -> Duration {
   let mut file = create_file("3.db").await;
   let start = Instant::now();
@@ -99,16 +98,16 @@ fn bench_write_del_hello_world(c: &mut Criterion) {
   #[cfg(feature = "async-std")]
   c.bench_function("write/del hello world", |b| {
     b.to_async(AsyncStdExecutor)
-      .iter_custom(|iters| write_del_hello_world(iters));
+      .iter_custom(write_del_hello_world);
   });
   #[cfg(feature = "tokio")]
   c.bench_function("write/del hello world", |b| {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    b.to_async(&rt)
-      .iter_custom(|iters| write_del_hello_world(iters));
+    b.to_async(&rt).iter_custom(write_del_hello_world);
   });
 }
 
+#[allow(clippy::unit_arg)]
 async fn write_del_hello_world(iters: u64) -> Duration {
   let mut file = create_file("4.db").await;
   let start = Instant::now();

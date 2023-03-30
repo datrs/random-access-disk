@@ -208,7 +208,7 @@ impl RandomAccess for RandomAccessDisk {
   ) -> Result<(), RandomAccessError> {
     let file = self.file.as_mut().expect("self.file was None.");
     file.seek(SeekFrom::Start(offset)).await?;
-    file.write_all(&data).await?;
+    file.write_all(data).await?;
     if self.auto_sync {
       file.sync_all().await?;
     }
@@ -235,7 +235,7 @@ impl RandomAccess for RandomAccessDisk {
     offset: u64,
     length: u64,
   ) -> Result<Vec<u8>, RandomAccessError> {
-    if (offset + length) as u64 > self.length {
+    if offset + length > self.length {
       return Err(RandomAccessError::OutOfBounds {
         offset,
         end: Some(offset + length),
@@ -273,8 +273,8 @@ impl RandomAccess for RandomAccessDisk {
       return self.truncate(offset).await;
     }
 
-    let mut file = self.file.as_mut().expect("self.file was None.");
-    trim(&mut file, offset, length, self.block_size).await?;
+    let file = self.file.as_mut().expect("self.file was None.");
+    trim(file, offset, length, self.block_size).await?;
     if self.auto_sync {
       file.sync_all().await?;
     }
@@ -283,7 +283,7 @@ impl RandomAccess for RandomAccessDisk {
 
   async fn truncate(&mut self, length: u64) -> Result<(), RandomAccessError> {
     let file = self.file.as_ref().expect("self.file was None.");
-    self.length = length as u64;
+    self.length = length;
     file.set_len(self.length).await?;
     if self.auto_sync {
       file.sync_all().await?;
@@ -364,7 +364,7 @@ impl Builder {
   /// Build a [RandomAccessDisk] instance
   pub async fn build(self) -> Result<RandomAccessDisk, RandomAccessError> {
     if let Some(dirname) = self.filename.parent() {
-      mkdirp::mkdirp(&dirname)?;
+      mkdirp::mkdirp(dirname)?;
     }
     let mut file = OpenOptions::new()
       .create(true)
