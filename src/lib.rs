@@ -11,19 +11,19 @@
 //!
 //! ## Features
 //!
-//! ### `sparse`
+//! ### `sparse` (default)
 //!
 //! Deleting may create sparse files, on by default. Creation of sparse files is tested on OSX, linux and Windows.
 //!
 //! **NB**: If this is on, `unsafe` code is used to make direct platform-specific calls!
 //!
+//! ### `async-std` (default)
+//!
+//! Use the async-std runtime, on by default. Either this or `tokio` is mandatory.
+//!
 //! ### `tokio`
 //!
 //! Use the tokio runtime. Either this or `async_std` is mandatory.
-//!
-//! ### `async-std`
-//!
-//! Use the async-std runtime. Either this or `tokio` is mandatory.
 //!
 //! ## Examples
 //!
