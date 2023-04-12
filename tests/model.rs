@@ -58,7 +58,7 @@ proptest! {
   fn implementation_matches_model(ops: Vec<Op>) {
     let rt = tokio::runtime::Runtime::new().unwrap();
     assert!(rt.block_on(async {
-      assert_implementation_matches_model(ops).await;
+      assert_implementation_matches_model(ops).await
     }));
   }
 }
