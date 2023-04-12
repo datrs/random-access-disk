@@ -1,3 +1,29 @@
+## 2023-04-12, Version 3.0.0
+### Commits
+- [[`0e4c5e3e87`](https://github.com/datrs/random-access-disk/commit/0e4c5e3e8776b5beb860d7a0507cac4a86fa5557)] Release 3.0.0 (Timo Tiuraniemi)
+- [[`5d90852e06`](https://github.com/datrs/random-access-disk/commit/5d90852e06c0c2666690cbd9ea2f050d73acf06c)] Fix formatting (Timo Tiuraniemi)
+- [[`456f88b618`](https://github.com/datrs/random-access-disk/commit/456f88b6189a45fdd8ee62df8272a95eadf3a0d7)] Switch from Travis to GHA (Timo Tiuraniemi)
+- [[`8c77c108a2`](https://github.com/datrs/random-access-disk/commit/8c77c108a225951f85719b8503026a74c1ec5ce3)] Merge pull request #48 from ttiurani/thiserror (Timo Tiuraniemi)
+- [[`1eb7cec052`](https://github.com/datrs/random-access-disk/commit/1eb7cec052d8782f001e2150b45f6bc544e38c77)] Update changelog (Bruno Tavares)
+
+### Stats
+```diff
+ .github/workflows/ci.yml | 112 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ CHANGELOG.md             |  20 ++++++++++++++
+ Cargo.toml               |  37 +++++++++++++++++--------
+ README.md                |  25 ++++++-----------
+ benches/sync.rs          | 194 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++---------------------------------------
+ src/default.rs           |  41 +++++++++++++++++++++++++++
+ src/lib.rs               | 310 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-------------------------------------
+ src/unix.rs              | 190 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ src/windows.rs           |  94 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ tests/model.rs           | 154 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++---------------------------------
+ tests/regression.rs      |   9 ++++--
+ tests/test.rs            | 201 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++---------------------------
+ 12 files changed, 1153 insertions(+), 234 deletions(-)
+```
+
+
 ## 2020-03-03, Version 2.0.0
 ### Commits
 - [[`e480856d06`](https://github.com/datrs/random-access-disk/commit/e480856d06af1357f33ef7bf826373c169df83d2)] (cargo-release) version 2.0.0 (Bruno Tavares)
