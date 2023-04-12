@@ -1,5 +1,5 @@
-use std::os::windows::prelude::{AsRawHandle, RawHandle};
 use random_access_storage::RandomAccessError;
+use std::os::windows::prelude::{AsRawHandle, RawHandle};
 
 use winapi::shared::minwindef::{DWORD, LPVOID};
 use winapi::um::ioapiset::DeviceIoControl;
