@@ -3,7 +3,12 @@ use random_access_storage::RandomAccess;
 use std::env;
 use tempfile::Builder;
 
-#[async_std::test]
+#[cfg(feature = "async-std")]
+use async_std::test as async_test;
+#[cfg(feature = "tokio")]
+use tokio::test as async_test;
+
+#[async_test]
 // postmortem: read_exact wasn't behaving like we hoped, so we had to switch
 // back to `.read()` and disable clippy for that rule specifically.
 async fn regress_1() {
@@ -19,7 +24,7 @@ async fn regress_1() {
   file.read(13, 5).await.unwrap();
 }
 
-#[async_std::test]
+#[async_test]
 // postmortem: accessing the same file twice would fail, so we had to switch to
 // from `.create_new()` to `.create()`.
 //
