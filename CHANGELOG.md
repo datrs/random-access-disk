@@ -1,3 +1,18 @@
+## 2024-01-09, Version 3.0.1
+### Commits
+- [[`69cfe7047c`](https://github.com/datrs/random-access-disk/commit/69cfe7047c71eded4ddfa935d83f9260f255ab8b)] Refactor PathBuf into impl AsRef<Path> (Fahmi Akbar Wildana)
+- [[`44134ffbf4`](https://github.com/datrs/random-access-disk/commit/44134ffbf484bfd15b9da2dd05b52072f7b5207c)] docs: fix broken actions link and tweak docs logo (Timo Tiuraniemi)
+- [[`d0b760e53b`](https://github.com/datrs/random-access-disk/commit/d0b760e53bef4a55daa9fee44864eb252220fa5c)] Sync tokio versions between dep and dev-dep (Timo Tiuraniemi)
+- [[`2d6c8938bf`](https://github.com/datrs/random-access-disk/commit/2d6c8938bf5a4dec876752fa4afb5939df82a782)] Update changelog (Timo Tiuraniemi)
+
+```diff
+ CHANGELOG.md | 26 ++++++++++++++++++++++++++
+ Cargo.toml   |  2 +-
+ README.md    |  4 ++--
+ src/lib.rs   |  8 ++++----
+ 4 files changed, 33 insertions(+), 7 deletions(-)
+```
+
 ## 2023-04-12, Version 3.0.0
 ### Commits
 - [[`0e4c5e3e87`](https://github.com/datrs/random-access-disk/commit/0e4c5e3e8776b5beb860d7a0507cac4a86fa5557)] Release 3.0.0 (Timo Tiuraniemi)
