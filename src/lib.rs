@@ -188,13 +188,13 @@ impl RandomAccessDisk {
   /// Create a new (auto-sync) instance to storage at `filename`.
   #[allow(clippy::new_ret_no_self)]
   pub async fn open(
-    filename: path::PathBuf,
+    filename: impl AsRef<path::Path>,
   ) -> Result<RandomAccessDisk, RandomAccessError> {
     Self::builder(filename).build().await
   }
 
   /// Initialize a builder with storage at `filename`.
-  pub fn builder(filename: path::PathBuf) -> Builder {
+  pub fn builder(filename: impl AsRef<path::Path>) -> Builder {
     Builder::new(filename)
   }
 }
@@ -345,9 +345,9 @@ pub struct Builder {
 
 impl Builder {
   /// Create new builder at `path` (with auto-sync true by default).
-  pub fn new(filename: path::PathBuf) -> Self {
+  pub fn new(filename: impl AsRef<path::Path>) -> Self {
     Self {
-      filename,
+      filename: filename.as_ref().into(),
       auto_sync: true,
     }
   }
