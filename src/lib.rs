@@ -178,7 +178,7 @@ use default::{get_length_and_block_size, set_sparse, trim};
 pub struct RandomAccessDisk {
   #[allow(dead_code)]
   filename: path::PathBuf,
-  file: Option<fs::File>,
+  file: fs::File,
   length: u64,
   block_size: u64,
   auto_sync: bool,
@@ -206,7 +206,7 @@ impl RandomAccess for RandomAccessDisk {
     offset: u64,
     data: &[u8],
   ) -> Result<(), RandomAccessError> {
-    let file = self.file.as_mut().expect("self.file was None.");
+    let ref mut file = self.file;
     file.seek(SeekFrom::Start(offset)).await?;
     file.write_all(data).await?;
     if self.auto_sync {
@@ -243,7 +243,7 @@ impl RandomAccess for RandomAccessDisk {
       });
     }
 
-    let file = self.file.as_mut().expect("self.file was None.");
+    let ref mut file = self.file;
     let mut buffer = vec![0; length as usize];
     file.seek(SeekFrom::Start(offset)).await?;
     let _bytes_read = file.read(&mut buffer[..]).await?;
@@ -273,7 +273,7 @@ impl RandomAccess for RandomAccessDisk {
       return self.truncate(offset).await;
     }
 
-    let file = self.file.as_mut().expect("self.file was None.");
+    let ref mut file = self.file;
     trim(file, offset, length, self.block_size).await?;
     if self.auto_sync {
       file.sync_all().await?;
@@ -282,7 +282,7 @@ impl RandomAccess for RandomAccessDisk {
   }
 
   async fn truncate(&mut self, length: u64) -> Result<(), RandomAccessError> {
-    let file = self.file.as_ref().expect("self.file was None.");
+    let ref file = self.file;
     self.length = length;
     file.set_len(self.length).await?;
     if self.auto_sync {
@@ -301,7 +301,7 @@ impl RandomAccess for RandomAccessDisk {
 
   async fn sync_all(&mut self) -> Result<(), RandomAccessError> {
     if !self.auto_sync {
-      let file = self.file.as_ref().expect("self.file was None.");
+      let ref file = self.file;
       file.sync_all().await?;
     }
     Ok(())
@@ -310,15 +310,14 @@ impl RandomAccess for RandomAccessDisk {
 
 impl Drop for RandomAccessDisk {
   fn drop(&mut self) {
+    let ref file = self.file;
     // We need to flush the file on drop. Unfortunately, that is not possible to do in a
     // non-blocking fashion, but our only other option here is losing data remaining in the
     // write cache. Good task schedulers should be resilient to occasional blocking hiccups in
     // file destructors so we don't expect this to be a common problem in practice.
     // (from async_std::fs::File::drop)
     #[cfg(feature = "async-std")]
-    if let Some(file) = &self.file {
-      let _ = async_std::task::block_on(file.sync_all());
-    }
+    let _ = async_std::task::block_on(file.sync_all());
     // For tokio, the below errors with:
     //
     // "Cannot start a runtime from within a runtime. This happens because a function (like
@@ -329,11 +328,9 @@ impl Drop for RandomAccessDisk {
     // in a sync drop(), so for tokio, we'll need to wait for a real AsyncDrop to arrive.
     //
     // #[cfg(feature = "tokio")]
-    // if let Some(file) = &self.file {
-    //   tokio::runtime::Handle::current()
-    //     .block_on(file.sync_all())
-    //     .expect("Could not sync file changes on drop.");
-    // }
+    // tokio::runtime::Handle::current()
+    //   .block_on(file.sync_all())
+    //   .expect("Could not sync file changes on drop.");
   }
 }
 
@@ -379,7 +376,7 @@ impl Builder {
     let (length, block_size) = get_length_and_block_size(&file).await?;
     Ok(RandomAccessDisk {
       filename: self.filename,
-      file: Some(file),
+      file,
       length,
       auto_sync: self.auto_sync,
       block_size,
