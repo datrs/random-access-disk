@@ -109,7 +109,7 @@ compile_error!("features `random-access-disk/async-std` and `random-access-disk/
 use async_std::{
   fs::{self, OpenOptions},
   io::prelude::{SeekExt, WriteExt},
-  io::{ReadExt, SeekFrom},
+  io::{BufReader, ReadExt, SeekFrom},
 };
 use random_access_storage::{RandomAccess, RandomAccessError};
 use std::ops::Drop;
@@ -120,7 +120,7 @@ use std::io::SeekFrom;
 #[cfg(feature = "tokio")]
 use tokio::{
   fs::{self, OpenOptions},
-  io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
+  io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader},
 };
 
 #[cfg(all(
@@ -196,6 +196,11 @@ impl RandomAccessDisk {
   /// Initialize a builder with storage at `filename`.
   pub fn builder(filename: impl AsRef<path::Path>) -> Builder {
     Builder::new(filename)
+  }
+
+  /// Acquire buffered reader.
+  pub fn reader(&self) -> BufReader<&fs::File> {
+    BufReader::new(&self.file)
   }
 }
 
