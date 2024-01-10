@@ -199,6 +199,29 @@ impl RandomAccessDisk {
   }
 
   /// Acquire buffered reader.
+  /// # Examples
+  /// Read each lines to delete on specific line/column
+  ///
+  /// ```no_run
+  /// # use random_access_disk::RandomAccessDisk;
+  /// # use random_access_storage::RandomAccess;
+  /// # use async_std::prelude::*;
+  /// # #[async_std::main]
+  /// # async fn main() {
+  /// let line = 10;
+  /// let column = 10;
+  /// let length = 5;
+  ///
+  /// let mut file = RandomAccessDisk::open("text.db").await.unwrap();
+  ///
+  /// let offset = column + file.reader()
+  ///     .lines().take(line - 1)
+  ///     .fold(column, |acc, line| acc + line.unwrap().len() as u64)
+  ///     .await;
+  ///
+  /// let _ = file.del(offset, length).await;
+  /// # }
+  /// ```
   pub fn reader(&self) -> BufReader<&fs::File> {
     BufReader::new(&self.file)
   }
