@@ -200,12 +200,20 @@ impl RandomAccessDisk {
 
   /// Acquire buffered reader.
   /// # Examples
-  /// Read each lines to delete on specific line/column
+  /// Read each lines to delete at specific line/column
   ///
   /// ```no_run
   /// # use random_access_disk::RandomAccessDisk;
   /// # use random_access_storage::RandomAccess;
-  /// # use async_std::prelude::*;
+  /// #
+  /// # #[cfg(feature = "async-std")]
+  /// # use async_std::{io::prelude::BufReadExt, stream::StreamExt};
+  /// #
+  /// # #[cfg(feature = "tokio")]
+  /// # use tokio::io::{AsyncBufReadExt};
+  /// # #[cfg(feature = "tokio")]
+  /// # use tokio_stream::{StreamExt, wrappers::LinesStream};
+  /// #
   /// # #[async_std::main]
   /// # async fn main() {
   /// let line = 10;
@@ -214,16 +222,22 @@ impl RandomAccessDisk {
   ///
   /// let mut file = RandomAccessDisk::open("text.db").await.unwrap();
   ///
-  /// let offset = column + file.reader()
-  ///     .lines().take(line - 1)
+  /// #[cfg(feature = "tokio")]
+  /// let lines = LinesStream::new(file.reader().lines());
+  ///
+  /// #[cfg(not(feature = "tokio"))]
+  /// let lines = file.reader().lines();
+  ///
+  /// let offset = column + lines
+  ///     .take(line - 1)
   ///     .fold(column, |acc, line| acc + line.unwrap().len() as u64)
   ///     .await;
   ///
   /// let _ = file.del(offset, length).await;
   /// # }
   /// ```
-  pub fn reader(&self) -> BufReader<&fs::File> {
-    BufReader::new(&self.file)
+  pub fn reader(&mut self) -> BufReader<&mut fs::File> {
+    BufReader::new(&mut self.file) // currently BufReader<&fs::File> didn't work on tokio
   }
 }
 
@@ -338,6 +352,7 @@ impl RandomAccess for RandomAccessDisk {
 
 impl Drop for RandomAccessDisk {
   fn drop(&mut self) {
+    #[cfg(feature = "async-std")]
     let ref file = self.file;
     // We need to flush the file on drop. Unfortunately, that is not possible to do in a
     // non-blocking fashion, but our only other option here is losing data remaining in the
