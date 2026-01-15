@@ -197,6 +197,30 @@ impl RandomAccessDisk {
   pub fn builder(filename: impl AsRef<path::Path>) -> Builder {
     Builder::new(filename)
   }
+
+  /// Read bytes at `offset` into the provided `buf`.
+  ///
+  /// Returns the number of bytes read. This avoids allocating a new buffer
+  /// on each read, unlike [`RandomAccess::read`].
+  pub async fn read_to(
+    &mut self,
+    offset: u64,
+    buf: &mut [u8],
+  ) -> Result<usize, RandomAccessError> {
+    let length = buf.len() as u64;
+    if offset + length > self.length {
+      return Err(RandomAccessError::OutOfBounds {
+        offset,
+        end: Some(offset + length),
+        length: self.length,
+      });
+    }
+
+    let file = self.file.as_mut().expect("self.file was None.");
+    file.seek(SeekFrom::Start(offset)).await?;
+    let bytes_read = file.read(buf).await?;
+    Ok(bytes_read)
+  }
 }
 
 #[async_trait::async_trait]
@@ -235,18 +259,8 @@ impl RandomAccess for RandomAccessDisk {
     offset: u64,
     length: u64,
   ) -> Result<Vec<u8>, RandomAccessError> {
-    if offset + length > self.length {
-      return Err(RandomAccessError::OutOfBounds {
-        offset,
-        end: Some(offset + length),
-        length: self.length,
-      });
-    }
-
-    let file = self.file.as_mut().expect("self.file was None.");
     let mut buffer = vec![0; length as usize];
-    file.seek(SeekFrom::Start(offset)).await?;
-    let _bytes_read = file.read(&mut buffer[..]).await?;
+    self.read_to(offset, &mut buffer).await?;
     Ok(buffer)
   }
 

@@ -371,3 +371,50 @@ async fn can_del_long_more_than_block() {
     .unwrap();
   assert_eq!(5, file.len().await.unwrap());
 }
+
+#[async_test]
+async fn can_read_to() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::open(dir.path().join("17.db"))
+    .await
+    .unwrap();
+  file.write(0, b"hello").await.unwrap();
+  file.write(5, b" world").await.unwrap();
+  let mut buf = [0u8; 11];
+  let bytes_read = file.read_to(0, &mut buf).await.unwrap();
+  assert_eq!(bytes_read, 11);
+  assert_eq!(&buf, b"hello world");
+}
+
+#[async_test]
+async fn can_read_to_partial() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::open(dir.path().join("18.db"))
+    .await
+    .unwrap();
+  file.write(0, b"hello world").await.unwrap();
+  let mut buf = [0u8; 5];
+  let bytes_read = file.read_to(6, &mut buf).await.unwrap();
+  assert_eq!(bytes_read, 5);
+  assert_eq!(&buf, b"world");
+}
+
+#[async_test]
+async fn read_to_out_of_bounds() {
+  let dir = Builder::new()
+    .prefix("random-access-disk")
+    .tempdir()
+    .unwrap();
+  let mut file = rad::RandomAccessDisk::open(dir.path().join("19.db"))
+    .await
+    .unwrap();
+  file.write(0, b"hello").await.unwrap();
+  let mut buf = [0u8; 10];
+  assert!(file.read_to(0, &mut buf).await.is_err());
+}
