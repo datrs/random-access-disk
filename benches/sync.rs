@@ -1,119 +1,119 @@
 use std::time::{Duration, Instant};
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use random_access_disk as rad;
 use random_access_storage::RandomAccess;
 
 fn bench_write_hello_world(c: &mut Criterion) {
-  c.bench_function("write hello world", |b| {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    b.to_async(&rt).iter_custom(write_hello_world);
-  });
+    c.bench_function("write hello world", |b| {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        b.to_async(&rt).iter_custom(write_hello_world);
+    });
 }
 
 #[allow(clippy::unit_arg)]
 async fn write_hello_world(iters: u64) -> Duration {
-  let file = create_file("1.db").await;
-  let start = Instant::now();
-  for _ in 0..iters {
-    black_box(
-      async {
-        file.write(0, b"hello").await.unwrap();
-        file.write(5, b" world").await.unwrap();
-      }
-      .await,
-    );
-  }
-  start.elapsed()
+    let file = create_file("1.db").await;
+    let start = Instant::now();
+    for _ in 0..iters {
+        black_box(
+            async {
+                file.write(0, b"hello").await.unwrap();
+                file.write(5, b" world").await.unwrap();
+            }
+            .await,
+        );
+    }
+    start.elapsed()
 }
 
 fn bench_read_hello_world(c: &mut Criterion) {
-  c.bench_function("read hello world", |b| {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    b.to_async(&rt).iter_custom(read_hello_world);
-  });
+    c.bench_function("read hello world", |b| {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        b.to_async(&rt).iter_custom(read_hello_world);
+    });
 }
 
 #[allow(clippy::unit_arg)]
 async fn read_hello_world(iters: u64) -> Duration {
-  let file = create_file("2.db").await;
-  file.write(0, b"hello").await.unwrap();
-  file.write(5, b" world").await.unwrap();
-  let start = Instant::now();
-  for _ in 0..iters {
-    black_box(
-      async {
-        let _text = file.read(0, 11).await.unwrap();
-      }
-      .await,
-    );
-  }
-  start.elapsed()
+    let file = create_file("2.db").await;
+    file.write(0, b"hello").await.unwrap();
+    file.write(5, b" world").await.unwrap();
+    let start = Instant::now();
+    for _ in 0..iters {
+        black_box(
+            async {
+                let _text = file.read(0, 11).await.unwrap();
+            }
+            .await,
+        );
+    }
+    start.elapsed()
 }
 
 fn bench_read_write_hello_world(c: &mut Criterion) {
-  c.bench_function("read/write hello world", |b| {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    b.to_async(&rt).iter_custom(read_write_hello_world);
-  });
+    c.bench_function("read/write hello world", |b| {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        b.to_async(&rt).iter_custom(read_write_hello_world);
+    });
 }
 
 #[allow(clippy::unit_arg)]
 async fn read_write_hello_world(iters: u64) -> Duration {
-  let file = create_file("3.db").await;
-  let start = Instant::now();
-  for _ in 0..iters {
-    black_box(
-      async {
-        file.write(0, b"hello").await.unwrap();
-        file.write(5, b" world").await.unwrap();
-        let _text = file.read(0, 11).await.unwrap();
-      }
-      .await,
-    );
-  }
-  start.elapsed()
+    let file = create_file("3.db").await;
+    let start = Instant::now();
+    for _ in 0..iters {
+        black_box(
+            async {
+                file.write(0, b"hello").await.unwrap();
+                file.write(5, b" world").await.unwrap();
+                let _text = file.read(0, 11).await.unwrap();
+            }
+            .await,
+        );
+    }
+    start.elapsed()
 }
 
 fn bench_write_del_hello_world(c: &mut Criterion) {
-  c.bench_function("write/del hello world", |b| {
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    b.to_async(&rt).iter_custom(write_del_hello_world);
-  });
+    c.bench_function("write/del hello world", |b| {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        b.to_async(&rt).iter_custom(write_del_hello_world);
+    });
 }
 
 #[allow(clippy::unit_arg)]
 async fn write_del_hello_world(iters: u64) -> Duration {
-  let file = create_file("4.db").await;
-  let start = Instant::now();
-  for _ in 0..iters {
-    black_box(
-      async {
-        file.write(0, b"hello world").await.unwrap();
-        file.del(0, 5).await.unwrap();
-        file.del(5, 6).await.unwrap();
-      }
-      .await,
-    );
-  }
-  start.elapsed()
+    let file = create_file("4.db").await;
+    let start = Instant::now();
+    for _ in 0..iters {
+        black_box(
+            async {
+                file.write(0, b"hello world").await.unwrap();
+                file.del(0, 5).await.unwrap();
+                file.del(5, 6).await.unwrap();
+            }
+            .await,
+        );
+    }
+    start.elapsed()
 }
 
 async fn create_file(file_name: &str) -> rad::RandomAccessDisk {
-  let dir = tempfile::Builder::new()
-    .prefix("random-access-disk")
-    .tempdir()
-    .unwrap();
-  rad::RandomAccessDisk::open(dir.path().join(file_name))
-    .await
-    .unwrap()
+    let dir = tempfile::Builder::new()
+        .prefix("random-access-disk")
+        .tempdir()
+        .unwrap();
+    rad::RandomAccessDisk::open(dir.path().join(file_name))
+        .await
+        .unwrap()
 }
 
 criterion_group!(
-  benches,
-  bench_write_hello_world,
-  bench_read_hello_world,
-  bench_read_write_hello_world,
-  bench_write_del_hello_world,
+    benches,
+    bench_write_hello_world,
+    bench_read_hello_world,
+    bench_read_write_hello_world,
+    bench_write_del_hello_world,
 );
 criterion_main!(benches);
