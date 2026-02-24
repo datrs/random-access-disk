@@ -137,15 +137,15 @@ async fn can_len() {
   let mut file = rad::RandomAccessDisk::open(dir.path().join("8.db"))
     .await
     .unwrap();
-  assert_eq!(file.len().await.unwrap(), 0);
+  assert_eq!(file.len(), 0);
   file.write(0, b"hello").await.unwrap();
-  assert_eq!(file.len().await.unwrap(), 5);
+  assert_eq!(file.len(), 5);
   file.write(5, b" world").await.unwrap();
-  assert_eq!(file.len().await.unwrap(), 11);
+  assert_eq!(file.len(), 11);
   file.truncate(15).await.unwrap();
-  assert_eq!(file.len().await.unwrap(), 15);
+  assert_eq!(file.len(), 15);
   file.truncate(8).await.unwrap();
-  assert_eq!(file.len().await.unwrap(), 8);
+  assert_eq!(file.len(), 8);
 }
 
 #[async_test]
@@ -330,7 +330,7 @@ async fn can_del_long_exact_block() {
   let zeros = file.read(BLOCK_LEN as u64 - 5, 5).await.unwrap();
   assert_eq!(zeros, vec![0; 5]);
   file.del(0, (BLOCK_LEN + 1) as u64).await.unwrap();
-  assert_eq!(0, file.len().await.unwrap());
+  assert_eq!(0, file.len());
 }
 
 #[async_test]
@@ -365,5 +365,5 @@ async fn can_del_long_more_than_block() {
     .del(5, (EXACT_TO_THIRD_BLOCK_LEN * 2) as u64)
     .await
     .unwrap();
-  assert_eq!(5, file.len().await.unwrap());
+  assert_eq!(5, file.len());
 }

@@ -42,14 +42,14 @@
 //! storage.write(0, b"hello").await.unwrap();
 //! storage.write(5, b" world").await.unwrap();
 //! assert_eq!(storage.read(0, 11).await.unwrap(), b"hello world");
-//! assert_eq!(storage.len().await.unwrap(), 11);
+//! assert_eq!(storage.len(), 11);
 //! storage.del(5, 2).await.unwrap();
 //! assert_eq!(storage.read(5, 2).await.unwrap(), [0, 0]);
-//! assert_eq!(storage.len().await.unwrap(), 11);
+//! assert_eq!(storage.len(), 11);
 //! storage.truncate(2).await.unwrap();
-//! assert_eq!(storage.len().await.unwrap(), 2);
+//! assert_eq!(storage.len(), 2);
 //! storage.truncate(5).await.unwrap();
-//! assert_eq!(storage.len().await.unwrap(), 5);
+//! assert_eq!(storage.len(), 5);
 //! assert_eq!(storage.read(0, 5).await.unwrap(), [b'h', b'e', 0, 0, 0]);
 //! # }
 //! ```
@@ -92,8 +92,14 @@ compile_error!("feature `random-access-disk/tokio` must be enabled.");
 
 use async_lock::Mutex;
 use random_access_storage::{BoxFuture, RandomAccess, RandomAccessError};
-use std::{path, sync::Arc};
 use std::io::SeekFrom;
+use std::{
+  path,
+  sync::{
+    Arc,
+    atomic::{AtomicU64, Ordering},
+  },
+};
 use tokio::{
   fs::{self, OpenOptions},
   io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
@@ -159,7 +165,10 @@ struct DiskInner {
 }
 
 impl DiskInner {
-  async fn do_truncate(&mut self, length: u64) -> Result<(), RandomAccessError> {
+  async fn do_truncate(
+    &mut self,
+    length: u64,
+  ) -> Result<(), RandomAccessError> {
     self.length = length;
     let auto_sync = self.auto_sync;
     let file = self.file.as_ref().expect("self.file was None.");
@@ -177,6 +186,8 @@ pub struct RandomAccessDisk {
   #[allow(dead_code)]
   filename: path::PathBuf,
   inner: Arc<Mutex<DiskInner>>,
+  /// Cached length for synchronous reads via [`RandomAccess::len`].
+  length: Arc<AtomicU64>,
 }
 
 impl RandomAccessDisk {
@@ -201,6 +212,7 @@ impl RandomAccess for RandomAccessDisk {
     offset: u64,
     data: &[u8],
   ) -> Result<(), RandomAccessError> {
+    let length_arc = Arc::clone(&self.length);
     let mut inner = self.inner.lock().await;
     let auto_sync = inner.auto_sync;
     let new_len = offset + (data.len() as u64);
@@ -214,6 +226,7 @@ impl RandomAccess for RandomAccessDisk {
     }
     if new_len > inner.length {
       inner.length = new_len;
+      length_arc.store(new_len, Ordering::Relaxed);
     }
     Ok(())
   }
@@ -255,6 +268,7 @@ impl RandomAccess for RandomAccessDisk {
     offset: u64,
     length: u64,
   ) -> Result<(), RandomAccessError> {
+    let length_arc = Arc::clone(&self.length);
     let mut inner = self.inner.lock().await;
     if offset > inner.length {
       return Err(RandomAccessError::OutOfBounds {
@@ -271,7 +285,9 @@ impl RandomAccess for RandomAccessDisk {
 
     // Delete is truncate if up to the current length or more is deleted
     if offset + length >= inner.length {
-      return inner.do_truncate(offset).await;
+      inner.do_truncate(offset).await?;
+      length_arc.store(offset, Ordering::Relaxed);
+      return Ok(());
     }
 
     let auto_sync = inner.auto_sync;
@@ -285,11 +301,15 @@ impl RandomAccess for RandomAccessDisk {
   }
 
   async fn truncate(&mut self, length: u64) -> Result<(), RandomAccessError> {
-    self.inner.lock().await.do_truncate(length).await
+    let length_arc = Arc::clone(&self.length);
+    let mut inner = self.inner.lock().await;
+    inner.do_truncate(length).await?;
+    length_arc.store(length, Ordering::Relaxed);
+    Ok(())
   }
 
-  async fn len(&mut self) -> Result<u64, RandomAccessError> {
-    Ok(self.inner.lock().await.length)
+  fn len(&self) -> u64 {
+    self.length.load(Ordering::Relaxed)
   }
 
   async fn is_empty(&mut self) -> Result<bool, RandomAccessError> {
@@ -354,6 +374,7 @@ impl Builder {
     set_sparse(&mut file).await?;
 
     let (length, block_size) = get_length_and_block_size(&file).await?;
+    let length_arc = Arc::new(AtomicU64::new(length));
     Ok(RandomAccessDisk {
       filename: self.filename,
       inner: Arc::new(Mutex::new(DiskInner {
@@ -362,6 +383,7 @@ impl Builder {
         auto_sync: self.auto_sync,
         block_size,
       })),
+      length: length_arc,
     })
   }
 }
