@@ -38,7 +38,7 @@
 //! use random_access_disk::RandomAccessDisk;
 //!
 //! let path = tempfile::Builder::new().prefix("basic").tempfile().unwrap().into_temp_path();
-//! let mut storage = RandomAccessDisk::open(path.to_path_buf()).await.unwrap();
+//! let storage = RandomAccessDisk::open(path.to_path_buf()).await.unwrap();
 //! storage.write(0, b"hello").await.unwrap();
 //! storage.write(5, b" world").await.unwrap();
 //! assert_eq!(storage.read(0, 11).await.unwrap(), b"hello world");
@@ -67,12 +67,12 @@
 //! use std::fmt::Debug;
 //!
 //! let path = tempfile::Builder::new().prefix("swappable").tempfile().unwrap().into_temp_path();
-//! let mut storage = RandomAccessDisk::open(path.to_path_buf()).await.unwrap();
-//! write_hello_world(&mut storage).await;
+//! let storage = RandomAccessDisk::open(path.to_path_buf()).await.unwrap();
+//! write_hello_world(&storage).await;
 //! assert_eq!(read_hello_world(&storage).await, b"hello world");
 //!
 //! /// Write with swappable storage
-//! async fn write_hello_world<T>(storage: &mut T)
+//! async fn write_hello_world<T>(storage: &T)
 //! where T: RandomAccess + Debug + Send,
 //! {
 //!   storage.write(0, b"hello").await.unwrap();
