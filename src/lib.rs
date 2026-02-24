@@ -205,7 +205,6 @@ impl RandomAccessDisk {
   }
 }
 
-#[async_trait::async_trait]
 impl RandomAccess for RandomAccessDisk {
   fn write(&self, offset: u64, data: &[u8]) -> BoxFuture<Result<(), RandomAccessError>> {
     let inner = self.inner.clone();
