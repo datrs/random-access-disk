@@ -79,7 +79,7 @@
 //! let path = tempfile::Builder::new().prefix("swappable").tempfile().unwrap().into_temp_path();
 //! let mut storage = RandomAccessDisk::open(path.to_path_buf()).await.unwrap();
 //! write_hello_world(&mut storage).await;
-//! assert_eq!(read_hello_world(&mut storage).await, b"hello world");
+//! assert_eq!(read_hello_world(&storage).await, b"hello world");
 //!
 //! /// Write with swappable storage
 //! async fn write_hello_world<T>(storage: &mut T)
@@ -90,7 +90,7 @@
 //! }
 //!
 //! /// Read with swappable storage
-//! async fn read_hello_world<T>(storage: &mut T) -> Vec<u8>
+//! async fn read_hello_world<T>(storage: &T) -> Vec<u8>
 //! where T: RandomAccess + Debug + Send,
 //! {
 //!   storage.read(0, 11).await.unwrap()
@@ -111,9 +111,9 @@ use async_std::{
   io::prelude::{SeekExt, WriteExt},
   io::{ReadExt, SeekFrom},
 };
-use random_access_storage::{RandomAccess, RandomAccessError};
-use std::ops::Drop;
-use std::path;
+use async_lock::Mutex;
+use random_access_storage::{BoxFuture, RandomAccess, RandomAccessError};
+use std::{ops::Drop, path, sync::Arc};
 
 #[cfg(feature = "tokio")]
 use std::io::SeekFrom;
@@ -173,15 +173,34 @@ mod default;
 )))]
 use default::{get_length_and_block_size, set_sparse, trim};
 
-/// Main constructor.
+/// Internal mutable state of [RandomAccessDisk].
 #[derive(Debug)]
-pub struct RandomAccessDisk {
-  #[allow(dead_code)]
-  filename: path::PathBuf,
+struct DiskInner {
   file: Option<fs::File>,
   length: u64,
   block_size: u64,
   auto_sync: bool,
+}
+
+impl DiskInner {
+  async fn do_truncate(&mut self, length: u64) -> Result<(), RandomAccessError> {
+    self.length = length;
+    let auto_sync = self.auto_sync;
+    let file = self.file.as_ref().expect("self.file was None.");
+    file.set_len(length).await?;
+    if auto_sync {
+      file.sync_all().await?;
+    }
+    Ok(())
+  }
+}
+
+/// Main constructor.
+#[derive(Debug, Clone)]
+pub struct RandomAccessDisk {
+  #[allow(dead_code)]
+  filename: path::PathBuf,
+  inner: Arc<Mutex<DiskInner>>,
 }
 
 impl RandomAccessDisk {
@@ -206,19 +225,20 @@ impl RandomAccess for RandomAccessDisk {
     offset: u64,
     data: &[u8],
   ) -> Result<(), RandomAccessError> {
-    let file = self.file.as_mut().expect("self.file was None.");
-    file.seek(SeekFrom::Start(offset)).await?;
-    file.write_all(data).await?;
-    if self.auto_sync {
-      file.sync_all().await?;
-    }
-
-    // We've changed the length of our file.
+    let mut inner = self.inner.lock().await;
+    let auto_sync = inner.auto_sync;
     let new_len = offset + (data.len() as u64);
-    if new_len > self.length {
-      self.length = new_len;
+    {
+      let file = inner.file.as_mut().expect("self.file was None.");
+      file.seek(SeekFrom::Start(offset)).await?;
+      file.write_all(data).await?;
+      if auto_sync {
+        file.sync_all().await?;
+      }
     }
-
+    if new_len > inner.length {
+      inner.length = new_len;
+    }
     Ok(())
   }
 
@@ -230,24 +250,28 @@ impl RandomAccess for RandomAccessDisk {
   // because we're replacing empty data with actual zeroes - which does not
   // reflect the state of the world.
   // #[cfg_attr(test, allow(unused_io_amount))]
-  async fn read(
-    &mut self,
+  fn read(
+    &self,
     offset: u64,
     length: u64,
-  ) -> Result<Vec<u8>, RandomAccessError> {
-    if offset + length > self.length {
-      return Err(RandomAccessError::OutOfBounds {
-        offset,
-        end: Some(offset + length),
-        length: self.length,
-      });
-    }
-
-    let file = self.file.as_mut().expect("self.file was None.");
-    let mut buffer = vec![0; length as usize];
-    file.seek(SeekFrom::Start(offset)).await?;
-    let _bytes_read = file.read(&mut buffer[..]).await?;
-    Ok(buffer)
+  ) -> BoxFuture<Result<Vec<u8>, RandomAccessError>> {
+    let inner = self.inner.clone();
+    Box::pin(async move {
+      let mut guard = inner.lock().await;
+      let stored_length = guard.length;
+      if offset + length > stored_length {
+        return Err(RandomAccessError::OutOfBounds {
+          offset,
+          end: Some(offset + length),
+          length: stored_length,
+        });
+      }
+      let file = guard.file.as_mut().expect("self.file was None.");
+      let mut buffer = vec![0; length as usize];
+      file.seek(SeekFrom::Start(offset)).await?;
+      let _bytes_read = file.read(&mut buffer[..]).await?;
+      Ok(buffer)
+    })
   }
 
   async fn del(
@@ -255,11 +279,12 @@ impl RandomAccess for RandomAccessDisk {
     offset: u64,
     length: u64,
   ) -> Result<(), RandomAccessError> {
-    if offset > self.length {
+    let mut inner = self.inner.lock().await;
+    if offset > inner.length {
       return Err(RandomAccessError::OutOfBounds {
         offset,
         end: None,
-        length: self.length,
+        length: inner.length,
       });
     };
 
@@ -269,39 +294,36 @@ impl RandomAccess for RandomAccessDisk {
     }
 
     // Delete is truncate if up to the current length or more is deleted
-    if offset + length >= self.length {
-      return self.truncate(offset).await;
+    if offset + length >= inner.length {
+      return inner.do_truncate(offset).await;
     }
 
-    let file = self.file.as_mut().expect("self.file was None.");
-    trim(file, offset, length, self.block_size).await?;
-    if self.auto_sync {
+    let auto_sync = inner.auto_sync;
+    let block_size = inner.block_size;
+    let file = inner.file.as_mut().expect("self.file was None.");
+    trim(file, offset, length, block_size).await?;
+    if auto_sync {
       file.sync_all().await?;
     }
     Ok(())
   }
 
   async fn truncate(&mut self, length: u64) -> Result<(), RandomAccessError> {
-    let file = self.file.as_ref().expect("self.file was None.");
-    self.length = length;
-    file.set_len(self.length).await?;
-    if self.auto_sync {
-      file.sync_all().await?;
-    }
-    Ok(())
+    self.inner.lock().await.do_truncate(length).await
   }
 
   async fn len(&mut self) -> Result<u64, RandomAccessError> {
-    Ok(self.length)
+    Ok(self.inner.lock().await.length)
   }
 
   async fn is_empty(&mut self) -> Result<bool, RandomAccessError> {
-    Ok(self.length == 0)
+    Ok(self.inner.lock().await.length == 0)
   }
 
   async fn sync_all(&mut self) -> Result<(), RandomAccessError> {
-    if !self.auto_sync {
-      let file = self.file.as_ref().expect("self.file was None.");
+    let inner = self.inner.lock().await;
+    if !inner.auto_sync {
+      let file = inner.file.as_ref().expect("self.file was None.");
       file.sync_all().await?;
     }
     Ok(())
@@ -310,30 +332,17 @@ impl RandomAccess for RandomAccessDisk {
 
 impl Drop for RandomAccessDisk {
   fn drop(&mut self) {
-    // We need to flush the file on drop. Unfortunately, that is not possible to do in a
-    // non-blocking fashion, but our only other option here is losing data remaining in the
-    // write cache. Good task schedulers should be resilient to occasional blocking hiccups in
-    // file destructors so we don't expect this to be a common problem in practice.
-    // (from async_std::fs::File::drop)
+    // We need to flush the file on drop. We attempt a non-blocking try_lock
+    // so we don't deadlock if a lock is somehow still held; in practice this
+    // succeeds since Drop runs after all borrows are released.
     #[cfg(feature = "async-std")]
-    if let Some(file) = &self.file {
-      let _ = async_std::task::block_on(file.sync_all());
+    if let Some(guard) = self.inner.try_lock() {
+      if let Some(file) = &guard.file {
+        let _ = async_std::task::block_on(file.sync_all());
+      }
     }
-    // For tokio, the below errors with:
-    //
-    // "Cannot start a runtime from within a runtime. This happens because a function (like
-    // `block_on`) attempted to block the current thread while the thread is being used to
-    // drive asynchronous tasks."
-    //
-    // There doesn't seem to be an equivalent block_on version for tokio that actually works
-    // in a sync drop(), so for tokio, we'll need to wait for a real AsyncDrop to arrive.
-    //
-    // #[cfg(feature = "tokio")]
-    // if let Some(file) = &self.file {
-    //   tokio::runtime::Handle::current()
-    //     .block_on(file.sync_all())
-    //     .expect("Could not sync file changes on drop.");
-    // }
+    // For tokio, block_on inside a running runtime panics, so we skip it.
+    // See the original comment for details; this will be resolved by AsyncDrop.
   }
 }
 
@@ -379,10 +388,12 @@ impl Builder {
     let (length, block_size) = get_length_and_block_size(&file).await?;
     Ok(RandomAccessDisk {
       filename: self.filename,
-      file: Some(file),
-      length,
-      auto_sync: self.auto_sync,
-      block_size,
+      inner: Arc::new(Mutex::new(DiskInner {
+        file: Some(file),
+        length,
+        auto_sync: self.auto_sync,
+        block_size,
+      })),
     })
   }
 }
