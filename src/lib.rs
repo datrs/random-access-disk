@@ -207,28 +207,28 @@ impl RandomAccessDisk {
 
 #[async_trait::async_trait]
 impl RandomAccess for RandomAccessDisk {
-  async fn write(
-    &mut self,
-    offset: u64,
-    data: &[u8],
-  ) -> Result<(), RandomAccessError> {
+  fn write(&self, offset: u64, data: &[u8]) -> BoxFuture<Result<(), RandomAccessError>> {
+    let inner = self.inner.clone();
     let length_arc = Arc::clone(&self.length);
-    let mut inner = self.inner.lock().await;
-    let auto_sync = inner.auto_sync;
-    let new_len = offset + (data.len() as u64);
-    {
-      let file = inner.file.as_mut().expect("self.file was None.");
-      file.seek(SeekFrom::Start(offset)).await?;
-      file.write_all(data).await?;
-      if auto_sync {
-        file.sync_all().await?;
+    let data = data.to_vec();
+    Box::pin(async move {
+      let mut inner = inner.lock().await;
+      let auto_sync = inner.auto_sync;
+      let new_len = offset + (data.len() as u64);
+      {
+        let file = inner.file.as_mut().expect("self.file was None.");
+        file.seek(SeekFrom::Start(offset)).await?;
+        file.write_all(&data).await?;
+        if auto_sync {
+          file.sync_all().await?;
+        }
       }
-    }
-    if new_len > inner.length {
-      inner.length = new_len;
-      length_arc.store(new_len, Ordering::Relaxed);
-    }
-    Ok(())
+      if new_len > inner.length {
+        inner.length = new_len;
+        length_arc.store(new_len, Ordering::Relaxed);
+      }
+      Ok(())
+    })
   }
 
   // NOTE(yw): disabling clippy here because we files on disk might be sparse,
