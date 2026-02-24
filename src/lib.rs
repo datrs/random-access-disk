@@ -300,12 +300,15 @@ impl RandomAccess for RandomAccessDisk {
     Ok(())
   }
 
-  async fn truncate(&mut self, length: u64) -> Result<(), RandomAccessError> {
+  fn truncate(&self, length: u64) -> BoxFuture<Result<(), RandomAccessError>> {
+    let inner = self.inner.clone();
     let length_arc = Arc::clone(&self.length);
-    let mut inner = self.inner.lock().await;
-    inner.do_truncate(length).await?;
-    length_arc.store(length, Ordering::Relaxed);
-    Ok(())
+    Box::pin(async move {
+      let mut inner = inner.lock().await;
+      inner.do_truncate(length).await?;
+      length_arc.store(length, Ordering::Relaxed);
+      Ok(())
+    })
   }
 
   fn len(&self) -> u64 {
