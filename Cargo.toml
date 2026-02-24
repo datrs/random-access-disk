@@ -22,7 +22,7 @@ winapi = { version = "0.3.9", features = ["ioapiset", "winioctl"] }
 
 [dev-dependencies]
 proptest = "1.1.0"
-proptest-derive = "0.2.0"
+proptest-derive = "0.8.0"
 tempfile = "3.1.0"
 tokio = { version = "1.27.0", features = ["macros", "rt", "rt-multi-thread"] }
 criterion = { version = "0.4", features = ["async_tokio"] }
