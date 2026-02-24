@@ -60,7 +60,7 @@ async fn assert_implementation_matches_model(ops: Vec<Op>) -> bool {
     .tempdir()
     .unwrap();
 
-  let mut implementation = RandomAccessDisk::open(dir.path().join("1.db"))
+  let implementation = RandomAccessDisk::open(dir.path().join("1.db"))
     .await
     .unwrap();
   let mut model = vec![];

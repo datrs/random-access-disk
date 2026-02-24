@@ -13,7 +13,7 @@ fn bench_write_hello_world(c: &mut Criterion) {
 
 #[allow(clippy::unit_arg)]
 async fn write_hello_world(iters: u64) -> Duration {
-  let mut file = create_file("1.db").await;
+  let file = create_file("1.db").await;
   let start = Instant::now();
   for _ in 0..iters {
     black_box(
@@ -36,7 +36,7 @@ fn bench_read_hello_world(c: &mut Criterion) {
 
 #[allow(clippy::unit_arg)]
 async fn read_hello_world(iters: u64) -> Duration {
-  let mut file = create_file("2.db").await;
+  let file = create_file("2.db").await;
   file.write(0, b"hello").await.unwrap();
   file.write(5, b" world").await.unwrap();
   let start = Instant::now();
@@ -60,7 +60,7 @@ fn bench_read_write_hello_world(c: &mut Criterion) {
 
 #[allow(clippy::unit_arg)]
 async fn read_write_hello_world(iters: u64) -> Duration {
-  let mut file = create_file("3.db").await;
+  let file = create_file("3.db").await;
   let start = Instant::now();
   for _ in 0..iters {
     black_box(
@@ -84,7 +84,7 @@ fn bench_write_del_hello_world(c: &mut Criterion) {
 
 #[allow(clippy::unit_arg)]
 async fn write_del_hello_world(iters: u64) -> Duration {
-  let mut file = create_file("4.db").await;
+  let file = create_file("4.db").await;
   let start = Instant::now();
   for _ in 0..iters {
     black_box(

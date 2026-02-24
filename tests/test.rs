@@ -22,7 +22,7 @@ async fn can_open_buffer() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::open(dir.path().join("2.db"))
+  let file = rad::RandomAccessDisk::open(dir.path().join("2.db"))
     .await
     .unwrap();
   file.write(0, b"hello").await.unwrap();
@@ -34,7 +34,7 @@ async fn can_write() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::open(dir.path().join("3.db"))
+  let file = rad::RandomAccessDisk::open(dir.path().join("3.db"))
     .await
     .unwrap();
   file.write(0, b"hello").await.unwrap();
@@ -47,7 +47,7 @@ async fn can_read() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::open(dir.path().join("4.db"))
+  let file = rad::RandomAccessDisk::open(dir.path().join("4.db"))
     .await
     .unwrap();
   file.write(0, b"hello").await.unwrap();
@@ -62,7 +62,7 @@ async fn can_truncate_lt() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::open(dir.path().join("5.db"))
+  let file = rad::RandomAccessDisk::open(dir.path().join("5.db"))
     .await
     .unwrap();
   file.write(0, b"hello").await.unwrap();
@@ -85,7 +85,7 @@ async fn can_truncate_gt() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::open(dir.path().join("6.db"))
+  let file = rad::RandomAccessDisk::open(dir.path().join("6.db"))
     .await
     .unwrap();
   file.write(0, b"hello").await.unwrap();
@@ -111,7 +111,7 @@ async fn can_truncate_eq() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::open(dir.path().join("7.db"))
+  let file = rad::RandomAccessDisk::open(dir.path().join("7.db"))
     .await
     .unwrap();
   file.write(0, b"hello").await.unwrap();
@@ -134,7 +134,7 @@ async fn can_len() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::open(dir.path().join("8.db"))
+  let file = rad::RandomAccessDisk::open(dir.path().join("8.db"))
     .await
     .unwrap();
   assert_eq!(file.len(), 0);
@@ -154,7 +154,7 @@ async fn can_is_empty() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::open(dir.path().join("9.db"))
+  let file = rad::RandomAccessDisk::open(dir.path().join("9.db"))
     .await
     .unwrap();
   assert!(file.is_empty());
@@ -176,7 +176,7 @@ async fn explicit_no_auto_sync() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::builder(dir.path().join("10.db"))
+  let file = rad::RandomAccessDisk::builder(dir.path().join("10.db"))
     .auto_sync(false)
     .build()
     .await
@@ -202,7 +202,7 @@ async fn auto_sync() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::builder(dir.path().join("11.db"))
+  let file = rad::RandomAccessDisk::builder(dir.path().join("11.db"))
     .build()
     .await
     .unwrap();
@@ -226,7 +226,7 @@ async fn auto_sync_with_sync_call() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::builder(dir.path().join("12.db"))
+  let file = rad::RandomAccessDisk::builder(dir.path().join("12.db"))
     .build()
     .await
     .unwrap();
@@ -251,7 +251,7 @@ async fn can_del_short() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::builder(dir.path().join("13.db"))
+  let file = rad::RandomAccessDisk::builder(dir.path().join("13.db"))
     .build()
     .await
     .unwrap();
@@ -273,7 +273,7 @@ async fn can_del_long_middle() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::builder(dir.path().join("14.db"))
+  let file = rad::RandomAccessDisk::builder(dir.path().join("14.db"))
     .build()
     .await
     .unwrap();
@@ -317,7 +317,7 @@ async fn can_del_long_exact_block() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::builder(dir.path().join("15.db"))
+  let file = rad::RandomAccessDisk::builder(dir.path().join("15.db"))
     .build()
     .await
     .unwrap();
@@ -339,7 +339,7 @@ async fn can_del_long_more_than_block() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file = rad::RandomAccessDisk::builder(dir.path().join("16.db"))
+  let file = rad::RandomAccessDisk::builder(dir.path().join("16.db"))
     .build()
     .await
     .unwrap();

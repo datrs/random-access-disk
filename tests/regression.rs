@@ -13,7 +13,7 @@ async fn regress_1() {
     .prefix("random-access-disk")
     .tempdir()
     .unwrap();
-  let mut file =
+  let file =
     rad::RandomAccessDisk::open(dir.path().join("regression-1.db"))
       .await
       .unwrap();
@@ -29,6 +29,6 @@ async fn regress_1() {
 async fn regress_2() {
   let mut dir = env::temp_dir();
   dir.push("regression-2.db");
-  let mut file = rad::RandomAccessDisk::open(dir).await.unwrap();
+  let file = rad::RandomAccessDisk::open(dir).await.unwrap();
   file.write(27, b"").await.unwrap();
 }
