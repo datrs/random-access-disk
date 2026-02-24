@@ -1,7 +1,4 @@
-#[cfg(feature = "async-std")]
-use async_std::fs;
 use random_access_storage::RandomAccessError;
-#[cfg(feature = "tokio")]
 use tokio::fs;
 
 /// Get file length and file system block size
@@ -24,14 +21,7 @@ pub async fn trim(
   length: u64,
   _block_size: u64,
 ) -> Result<(), RandomAccessError> {
-  #[cfg(feature = "async-std")]
-  use async_std::io::{
-    prelude::{SeekExt, WriteExt},
-    SeekFrom,
-  };
-  #[cfg(feature = "tokio")]
   use std::io::SeekFrom;
-  #[cfg(feature = "tokio")]
   use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 
   let data = vec![0_u8; length as usize];

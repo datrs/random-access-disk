@@ -6,9 +6,6 @@ use winapi::um::ioapiset::DeviceIoControl;
 use winapi::um::winioctl::FSCTL_SET_SPARSE;
 use winapi::um::winioctl::FSCTL_SET_ZERO_DATA;
 
-#[cfg(feature = "async-std")]
-use async_std::fs;
-#[cfg(feature = "tokio")]
 use tokio::fs;
 
 pub async fn get_length_and_block_size(

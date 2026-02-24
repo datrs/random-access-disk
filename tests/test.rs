@@ -3,9 +3,6 @@ use random_access_storage::RandomAccess;
 use std::io::Read;
 use tempfile::Builder;
 
-#[cfg(feature = "async-std")]
-use async_std::test as async_test;
-#[cfg(feature = "tokio")]
 use tokio::test as async_test;
 
 #[async_test]
@@ -174,7 +171,6 @@ async fn can_is_empty() {
 }
 
 #[async_test]
-#[cfg(feature = "async-std")]
 async fn explicit_no_auto_sync() {
   let dir = Builder::new()
     .prefix("random-access-disk")

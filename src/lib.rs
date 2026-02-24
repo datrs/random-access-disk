@@ -30,12 +30,7 @@
 //! Reading, writing, deleting and truncating:
 //!
 //! ```
-//! # #[cfg(feature = "tokio")]
 //! # tokio_test::block_on(async {
-//! # example().await;
-//! # });
-//! # #[cfg(feature = "async-std")]
-//! # async_std::task::block_on(async {
 //! # example().await;
 //! # });
 //! # async fn example() {
@@ -63,12 +58,7 @@
 //! in most cases want to use generic functions for storage manipulation:
 //!
 //! ```
-//! # #[cfg(feature = "tokio")]
 //! # tokio_test::block_on(async {
-//! # example().await;
-//! # });
-//! # #[cfg(feature = "async-std")]
-//! # async_std::task::block_on(async {
 //! # example().await;
 //! # });
 //! # async fn example() {
@@ -97,27 +87,13 @@
 //! }
 //! # }
 
-#[cfg(not(any(feature = "async-std", feature = "tokio")))]
-compile_error!(
-  "Either feature `random-access-disk/async-std` or `random-access-disk/tokio` must be enabled."
-);
+#[cfg(not(feature = "tokio"))]
+compile_error!("feature `random-access-disk/tokio` must be enabled.");
 
-#[cfg(all(feature = "async-std", feature = "tokio"))]
-compile_error!("features `random-access-disk/async-std` and `random-access-disk/tokio` are mutually exclusive");
-
-#[cfg(feature = "async-std")]
-use async_std::{
-  fs::{self, OpenOptions},
-  io::prelude::{SeekExt, WriteExt},
-  io::{ReadExt, SeekFrom},
-};
 use async_lock::Mutex;
 use random_access_storage::{BoxFuture, RandomAccess, RandomAccessError};
-use std::{ops::Drop, path, sync::Arc};
-
-#[cfg(feature = "tokio")]
+use std::{path, sync::Arc};
 use std::io::SeekFrom;
-#[cfg(feature = "tokio")]
 use tokio::{
   fs::{self, OpenOptions},
   io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
@@ -332,17 +308,10 @@ impl RandomAccess for RandomAccessDisk {
 
 impl Drop for RandomAccessDisk {
   fn drop(&mut self) {
-    // We need to flush the file on drop. We attempt a non-blocking try_lock
-    // so we don't deadlock if a lock is somehow still held; in practice this
-    // succeeds since Drop runs after all borrows are released.
-    #[cfg(feature = "async-std")]
-    if let Some(guard) = self.inner.try_lock() {
-      if let Some(file) = &guard.file {
-        let _ = async_std::task::block_on(file.sync_all());
-      }
-    }
-    // For tokio, block_on inside a running runtime panics, so we skip it.
-    // See the original comment for details; this will be resolved by AsyncDrop.
+    // Tokio cannot block_on inside a running runtime, so we cannot flush on
+    // drop. Changes buffered in the OS page cache will still reach disk
+    // eventually; call sync_all() explicitly before dropping if durability
+    // is required. This will be resolved when AsyncDrop stabilises.
   }
 }
 
@@ -361,10 +330,9 @@ impl Builder {
     }
   }
 
-  /// Set auto-sync
-  // NB: Because of no AsyncDrop, tokio can not ensure that changes are synced when dropped,
-  // see impl Drop above.
-  #[cfg(feature = "async-std")]
+  /// Set auto-sync.
+  // NB: tokio cannot flush on drop (no AsyncDrop yet), so disabling auto_sync
+  // means you must call sync_all() explicitly before the value is dropped.
   pub fn auto_sync(mut self, auto_sync: bool) -> Self {
     self.auto_sync = auto_sync;
     self

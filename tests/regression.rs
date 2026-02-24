@@ -3,9 +3,6 @@ use random_access_storage::RandomAccess;
 use std::env;
 use tempfile::Builder;
 
-#[cfg(feature = "async-std")]
-use async_std::test as async_test;
-#[cfg(feature = "tokio")]
 use tokio::test as async_test;
 
 #[async_test]
