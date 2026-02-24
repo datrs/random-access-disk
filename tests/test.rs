@@ -157,17 +157,17 @@ async fn can_is_empty() {
   let mut file = rad::RandomAccessDisk::open(dir.path().join("9.db"))
     .await
     .unwrap();
-  assert!(file.is_empty().await.unwrap());
+  assert!(file.is_empty());
   file.write(0, b"hello").await.unwrap();
-  assert!(!file.is_empty().await.unwrap());
+  assert!(!file.is_empty());
   file.truncate(0).await.unwrap();
-  assert!(file.is_empty().await.unwrap());
+  assert!(file.is_empty());
   file.truncate(1).await.unwrap();
-  assert!(!file.is_empty().await.unwrap());
+  assert!(!file.is_empty());
   file.truncate(0).await.unwrap();
-  assert!(file.is_empty().await.unwrap());
+  assert!(file.is_empty());
   file.write(0, b"what").await.unwrap();
-  assert!(!file.is_empty().await.unwrap());
+  assert!(!file.is_empty());
 }
 
 #[async_test]

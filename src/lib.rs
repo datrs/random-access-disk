@@ -312,10 +312,6 @@ impl RandomAccess for RandomAccessDisk {
     self.length.load(Ordering::Relaxed)
   }
 
-  async fn is_empty(&mut self) -> Result<bool, RandomAccessError> {
-    Ok(self.inner.lock().await.length == 0)
-  }
-
   async fn sync_all(&mut self) -> Result<(), RandomAccessError> {
     let inner = self.inner.lock().await;
     if !inner.auto_sync {
