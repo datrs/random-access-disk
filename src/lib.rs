@@ -312,13 +312,16 @@ impl RandomAccess for RandomAccessDisk {
     self.length.load(Ordering::Relaxed)
   }
 
-  async fn sync_all(&mut self) -> Result<(), RandomAccessError> {
-    let inner = self.inner.lock().await;
-    if !inner.auto_sync {
-      let file = inner.file.as_ref().expect("self.file was None.");
-      file.sync_all().await?;
-    }
-    Ok(())
+  fn sync_all(&self) -> BoxFuture<Result<(), RandomAccessError>> {
+    let inner = self.inner.clone();
+    Box::pin(async move {
+      let inner = inner.lock().await;
+      if !inner.auto_sync {
+        let file = inner.file.as_ref().expect("self.file was None.");
+        file.sync_all().await?;
+      }
+      Ok(())
+    })
   }
 }
 
