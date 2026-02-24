@@ -263,41 +263,40 @@ impl RandomAccess for RandomAccessDisk {
     })
   }
 
-  async fn del(
-    &mut self,
-    offset: u64,
-    length: u64,
-  ) -> Result<(), RandomAccessError> {
+  fn del(&self, offset: u64, length: u64) -> BoxFuture<Result<(), RandomAccessError>> {
+    let inner = self.inner.clone();
     let length_arc = Arc::clone(&self.length);
-    let mut inner = self.inner.lock().await;
-    if offset > inner.length {
-      return Err(RandomAccessError::OutOfBounds {
-        offset,
-        end: None,
-        length: inner.length,
-      });
-    };
+    Box::pin(async move {
+      let mut inner = inner.lock().await;
+      if offset > inner.length {
+        return Err(RandomAccessError::OutOfBounds {
+          offset,
+          end: None,
+          length: inner.length,
+        });
+      };
 
-    if length == 0 {
-      // No-op
-      return Ok(());
-    }
+      if length == 0 {
+        // No-op
+        return Ok(());
+      }
 
-    // Delete is truncate if up to the current length or more is deleted
-    if offset + length >= inner.length {
-      inner.do_truncate(offset).await?;
-      length_arc.store(offset, Ordering::Relaxed);
-      return Ok(());
-    }
+      // Delete is truncate if up to the current length or more is deleted
+      if offset + length >= inner.length {
+        inner.do_truncate(offset).await?;
+        length_arc.store(offset, Ordering::Relaxed);
+        return Ok(());
+      }
 
-    let auto_sync = inner.auto_sync;
-    let block_size = inner.block_size;
-    let file = inner.file.as_mut().expect("self.file was None.");
-    trim(file, offset, length, block_size).await?;
-    if auto_sync {
-      file.sync_all().await?;
-    }
-    Ok(())
+      let auto_sync = inner.auto_sync;
+      let block_size = inner.block_size;
+      let file = inner.file.as_mut().expect("self.file was None.");
+      trim(file, offset, length, block_size).await?;
+      if auto_sync {
+        file.sync_all().await?;
+      }
+      Ok(())
+    })
   }
 
   fn truncate(&self, length: u64) -> BoxFuture<Result<(), RandomAccessError>> {
