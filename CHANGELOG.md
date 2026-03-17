@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+* Drop all `async-std` stuff, we're only using `tokio` now. This removes both the `tokio` and `async-std` features.
 
 
 ## [3.0.1] - 2024-01-09

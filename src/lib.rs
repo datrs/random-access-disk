@@ -17,14 +17,6 @@
 //!
 //! **NB**: If this is on, `unsafe` code is used to make direct platform-specific calls!
 //!
-//! ### `async-std` (default)
-//!
-//! Use the async-std runtime, on by default. Either this or `tokio` is mandatory.
-//!
-//! ### `tokio`
-//!
-//! Use the tokio runtime. Either this or `async_std` is mandatory.
-//!
 //! ## Examples
 //!
 //! Reading, writing, deleting and truncating:
@@ -90,9 +82,6 @@
 //!   storage.read(0, 11).await.unwrap()
 //! }
 //! # }
-
-#[cfg(not(feature = "tokio"))]
-compile_error!("feature `random-access-disk/tokio` must be enabled.");
 
 use async_lock::Mutex;
 use random_access_storage::{BoxFuture, RandomAccess, RandomAccessError};
