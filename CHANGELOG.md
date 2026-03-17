@@ -1,4 +1,27 @@
-## 2024-01-09, Version 3.0.1
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+<!-- next-header -->
+
+## [Unreleased] - ReleaseDate
+
+### Added
+
+### Changed
+
+* Use new version of `random-access-storage` that returns owned futures.
+* Bump edition to 2024.
+* Remove `async-trait` dependency.
+
+### Removed
+
+
+
+## [3.0.1] - 2024-01-09
 ### Commits
 - [[`69cfe7047c`](https://github.com/datrs/random-access-disk/commit/69cfe7047c71eded4ddfa935d83f9260f255ab8b)] Refactor PathBuf into impl AsRef<Path> (Fahmi Akbar Wildana)
 - [[`44134ffbf4`](https://github.com/datrs/random-access-disk/commit/44134ffbf484bfd15b9da2dd05b52072f7b5207c)] docs: fix broken actions link and tweak docs logo (Timo Tiuraniemi)
@@ -13,7 +36,7 @@
  4 files changed, 33 insertions(+), 7 deletions(-)
 ```
 
-## 2023-04-12, Version 3.0.0
+## [3.0.0] - 2023-04-12
 ### Commits
 - [[`0e4c5e3e87`](https://github.com/datrs/random-access-disk/commit/0e4c5e3e8776b5beb860d7a0507cac4a86fa5557)] Release 3.0.0 (Timo Tiuraniemi)
 - [[`5d90852e06`](https://github.com/datrs/random-access-disk/commit/5d90852e06c0c2666690cbd9ea2f050d73acf06c)] Fix formatting (Timo Tiuraniemi)
@@ -39,7 +62,7 @@
 ```
 
 
-## 2020-03-03, Version 2.0.0
+## [2.0.0] - 2020-03-03
 ### Commits
 - [[`e480856d06`](https://github.com/datrs/random-access-disk/commit/e480856d06af1357f33ef7bf826373c169df83d2)] (cargo-release) version 2.0.0 (Bruno Tavares)
 - [[`b0f1507868`](https://github.com/datrs/random-access-disk/commit/b0f15078689fbfd379aa249ff45bf28be54f2249)] Implement async API for random-access-storage (#37) (Bruno Tavares)
@@ -59,7 +82,7 @@
 ```
 
 
-## 2020-03-03, Version 1.1.0
+## [1.1.0] - 2020-03-03
 ### Commits
 - [[`7063f6fa47`](https://github.com/datrs/random-access-disk/commit/7063f6fa47dc7689e1d44055aa594845345f890f)] (cargo-release) version 1.1.0 (Bruno Tavares)
 - [[`218aab2629`](https://github.com/datrs/random-access-disk/commit/218aab2629ce76308c946c62b61078b749100c53)] From Failure into std::error::Error (#36) (Bruno Tavares)
@@ -75,7 +98,7 @@
 ```
 
 
-## 2020-02-02, Version 1.0.0
+## [1.0.0] - 2020-02-02
 ### Commits
 - [[`3de8d37a0c`](https://github.com/datrs/random-access-disk/commit/3de8d37a0c33bc15874de8870734bbdd07a8b24c)] 1.0.0 (substack)
 - [[`2fca3428a6`](https://github.com/datrs/random-access-disk/commit/2fca3428a6ca6e484c5b31c8b62422553641731e)] Merge pull request #28 from bltavares/bump-deps (Szabolcs Berecz)
@@ -101,7 +124,7 @@
 ```
 
 
-## 2018-12-20, Version 0.8.0
+## [0.8.0] - 2018-12-20
 ### Commits
 - [[`c7cdc2d39a`](https://github.com/datrs/random-access-disk/commit/c7cdc2d39a7d92103f7125c28d2451ecf6272578)] (cargo-release) version 0.8.0 (Yoshua Wuyts)
 - [[`65bffdf0b8`](https://github.com/datrs/random-access-disk/commit/65bffdf0b8ef6d7b37a89b9ef498fb62a24a2e25)] len() and is_empty() implementation (#21) (James Halliday)
@@ -117,7 +140,7 @@
 ```
 
 
-## 2018-11-21, Version 0.7.0
+## [0.7.0] - 2018-11-21
 ### Commits
 - [[`9059d4f552`](https://github.com/datrs/random-access-disk/commit/9059d4f5524f16f52badff98a92e4b7db308a2d0)] (cargo-release) version 0.7.0 (Yoshua Wuyts)
 - [[`791e3fd8ee`](https://github.com/datrs/random-access-disk/commit/791e3fd8ee1fd7af387119e734fd498074fc8c33)] update travis (Yoshua Wuyts)
@@ -139,7 +162,7 @@
 ```
 
 
-## 2018-08-30, Version 0.6.0
+## [0.6.0] - 2018-08-30
 ### Commits
 - [[`1070eb3166`](https://github.com/datrs/random-access-disk/commits/1070eb31665c3578842997557af292a9e702a033)] (cargo-release) version 0.6.0 (Yoshua Wuyts)
 - [[`fb9ee81c81`](https://github.com/datrs/random-access-disk/commits/fb9ee81c81043619ecf6ea3a5d670373248cd677)] Random access always open (#13) (Szabolcs Berecz)
@@ -160,7 +183,7 @@
 ```
 
 
-## 2018-08-23, Version 0.5.0
+## [0.5.0] - 2018-08-23
 ### Commits
 - [[`647536ba06`](https://github.com/datrs/random-access-disk/commits/647536ba06ab55f810c7981e60d68481ec55044c)] (cargo-release) version 0.5.0 (Yoshua Wuyts)
 - [[`556d70f09a`](https://github.com/datrs/random-access-disk/commits/556d70f09a0b23cf15107442f9cefec7669ad463)] upgrade random-access-storage (#9)
@@ -185,4 +208,13 @@
  7 files changed, 26 insertions(+), 125 deletions(-)
 ```
 
-
+<!-- next-url -->
+[Unreleased]: https://github.com/datrs/random-access-disk/compare/v3.0.1...HEAD
+[3.0.1]: https://github.com/datrs/random-access-disk/compare/v3.0.0...v3.0.1
+[3.0.0]: https://github.com/datrs/random-access-disk/compare/v2.0.0...v3.0.0
+[2.0.0]: https://github.com/datrs/random-access-disk/compare/v1.1.0...v2.0.0
+[1.1.0]: https://github.com/datrs/random-access-disk/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/datrs/random-access-disk/compare/v0.8.0...v1.0.0
+[0.8.0]: https://github.com/datrs/random-access-disk/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/datrs/random-access-disk/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/datrs/random-access-disk/compare/v0.5.0...v0.6.0
