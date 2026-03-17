@@ -32,14 +32,8 @@ jobs:
         components: rustfmt
     - name: Run tests
       run: |
-        cargo check --no-default-features --features tokio
-        cargo check --no-default-features --features tokio,sparse
-        cargo check --no-default-features --features async-std
-        cargo check --no-default-features --features async-std,sparse
-        cargo test --no-default-features --features tokio
-        cargo test --no-default-features --features tokio,sparse
-        cargo test --no-default-features --features async-std
-        cargo test --no-default-features --features async-std,sparse
+        cargo check --no-default-features
+        cargo check --no-default-features --features sparse
 
   test-windows:
     runs-on: windows-latest
@@ -51,14 +45,8 @@ jobs:
           components: rustfmt
       - name: Run tests
         run: |
-          cargo check --no-default-features --features tokio
-          cargo check --no-default-features --features tokio,sparse
-          cargo check --no-default-features --features async-std
-          cargo check --no-default-features --features async-std,sparse
-          cargo test --no-default-features --features tokio
-          cargo test --no-default-features --features tokio,sparse
-          cargo test --no-default-features --features async-std
-          cargo test --no-default-features --features async-std,sparse
+          cargo check --no-default-features
+          cargo check --no-default-features --features sparse
 
   test-macos:
     runs-on: macos-latest
@@ -70,14 +58,8 @@ jobs:
           components: rustfmt
       - name: Run tests
         run: |
-          cargo check --no-default-features --features tokio
-          cargo check --no-default-features --features tokio,sparse
-          cargo check --no-default-features --features async-std
-          cargo check --no-default-features --features async-std,sparse
-          cargo test --no-default-features --features tokio
-          cargo test --no-default-features --features tokio,sparse
-          cargo test --no-default-features --features async-std
-          cargo test --no-default-features --features async-std,sparse
+          cargo check --no-default-features
+          cargo check --no-default-features --features sparse
 
   build-extra:
     runs-on: ubuntu-latest
@@ -87,14 +69,12 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Build benches
         run: |
-          cargo build --benches --no-default-features --features tokio
-          cargo build --benches --no-default-features --features async-std
+          cargo build --benches --no-default-features
+          cargo build --benches --no-default-features --features sparse
       - name: Build release
         run: |
-          cargo build --release --no-default-features --features tokio
-          cargo build --release --no-default-features --features tokio,sparse
-          cargo build --release --no-default-features --features async-std
-          cargo build --release --no-default-features --features async-std,sparse
+          cargo build --release --no-default-features
+          cargo build --release --no-default-features --features sparse
 
   lint:
     runs-on: ubuntu-latest

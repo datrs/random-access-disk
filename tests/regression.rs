@@ -3,25 +3,21 @@ use random_access_storage::RandomAccess;
 use std::env;
 use tempfile::Builder;
 
-#[cfg(feature = "async-std")]
-use async_std::test as async_test;
-#[cfg(feature = "tokio")]
 use tokio::test as async_test;
 
 #[async_test]
 // postmortem: read_exact wasn't behaving like we hoped, so we had to switch
 // back to `.read()` and disable clippy for that rule specifically.
 async fn regress_1() {
-  let dir = Builder::new()
-    .prefix("random-access-disk")
-    .tempdir()
-    .unwrap();
-  let mut file =
-    rad::RandomAccessDisk::open(dir.path().join("regression-1.db"))
-      .await
-      .unwrap();
-  file.write(27, b"").await.unwrap();
-  file.read(13, 5).await.unwrap();
+    let dir = Builder::new()
+        .prefix("random-access-disk")
+        .tempdir()
+        .unwrap();
+    let file = rad::RandomAccessDisk::open(dir.path().join("regression-1.db"))
+        .await
+        .unwrap();
+    file.write(27, b"").await.unwrap();
+    file.read(13, 5).await.unwrap();
 }
 
 #[async_test]
@@ -30,8 +26,8 @@ async fn regress_1() {
 //
 // NOTE: test needs to be run twice in a row to trigger regression. I'm sorry.
 async fn regress_2() {
-  let mut dir = env::temp_dir();
-  dir.push("regression-2.db");
-  let mut file = rad::RandomAccessDisk::open(dir).await.unwrap();
-  file.write(27, b"").await.unwrap();
+    let mut dir = env::temp_dir();
+    dir.push("regression-2.db");
+    let file = rad::RandomAccessDisk::open(dir).await.unwrap();
+    file.write(27, b"").await.unwrap();
 }

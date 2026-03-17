@@ -17,44 +17,35 @@
 //!
 //! **NB**: If this is on, `unsafe` code is used to make direct platform-specific calls!
 //!
-//! ### `async-std` (default)
-//!
-//! Use the async-std runtime, on by default. Either this or `tokio` is mandatory.
-//!
-//! ### `tokio`
-//!
-//! Use the tokio runtime. Either this or `async_std` is mandatory.
-//!
 //! ## Examples
 //!
 //! Reading, writing, deleting and truncating:
 //!
 //! ```
-//! # #[cfg(feature = "tokio")]
 //! # tokio_test::block_on(async {
 //! # example().await;
 //! # });
-//! # #[cfg(feature = "async-std")]
-//! # async_std::task::block_on(async {
-//! # example().await;
-//! # });
 //! # async fn example() {
-//! use random_access_storage::RandomAccess;
 //! use random_access_disk::RandomAccessDisk;
+//! use random_access_storage::RandomAccess;
 //!
-//! let path = tempfile::Builder::new().prefix("basic").tempfile().unwrap().into_temp_path();
-//! let mut storage = RandomAccessDisk::open(path.to_path_buf()).await.unwrap();
+//! let path = tempfile::Builder::new()
+//!     .prefix("basic")
+//!     .tempfile()
+//!     .unwrap()
+//!     .into_temp_path();
+//! let storage = RandomAccessDisk::open(path.to_path_buf()).await.unwrap();
 //! storage.write(0, b"hello").await.unwrap();
 //! storage.write(5, b" world").await.unwrap();
 //! assert_eq!(storage.read(0, 11).await.unwrap(), b"hello world");
-//! assert_eq!(storage.len().await.unwrap(), 11);
+//! assert_eq!(storage.len(), 11);
 //! storage.del(5, 2).await.unwrap();
 //! assert_eq!(storage.read(5, 2).await.unwrap(), [0, 0]);
-//! assert_eq!(storage.len().await.unwrap(), 11);
+//! assert_eq!(storage.len(), 11);
 //! storage.truncate(2).await.unwrap();
-//! assert_eq!(storage.len().await.unwrap(), 2);
+//! assert_eq!(storage.len(), 2);
 //! storage.truncate(5).await.unwrap();
-//! assert_eq!(storage.len().await.unwrap(), 5);
+//! assert_eq!(storage.len(), 5);
 //! assert_eq!(storage.read(0, 5).await.unwrap(), [b'h', b'e', 0, 0, 0]);
 //! # }
 //! ```
@@ -63,12 +54,7 @@
 //! in most cases want to use generic functions for storage manipulation:
 //!
 //! ```
-//! # #[cfg(feature = "tokio")]
 //! # tokio_test::block_on(async {
-//! # example().await;
-//! # });
-//! # #[cfg(feature = "async-std")]
-//! # async_std::task::block_on(async {
 //! # example().await;
 //! # });
 //! # async fn example() {
@@ -77,12 +63,12 @@
 //! use std::fmt::Debug;
 //!
 //! let path = tempfile::Builder::new().prefix("swappable").tempfile().unwrap().into_temp_path();
-//! let mut storage = RandomAccessDisk::open(path.to_path_buf()).await.unwrap();
-//! write_hello_world(&mut storage).await;
-//! assert_eq!(read_hello_world(&mut storage).await, b"hello world");
+//! let storage = RandomAccessDisk::open(path.to_path_buf()).await.unwrap();
+//! write_hello_world(&storage).await;
+//! assert_eq!(read_hello_world(&storage).await, b"hello world");
 //!
 //! /// Write with swappable storage
-//! async fn write_hello_world<T>(storage: &mut T)
+//! async fn write_hello_world<T>(storage: &T)
 //! where T: RandomAccess + Debug + Send,
 //! {
 //!   storage.write(0, b"hello").await.unwrap();
@@ -90,57 +76,46 @@
 //! }
 //!
 //! /// Read with swappable storage
-//! async fn read_hello_world<T>(storage: &mut T) -> Vec<u8>
+//! async fn read_hello_world<T>(storage: &T) -> Vec<u8>
 //! where T: RandomAccess + Debug + Send,
 //! {
 //!   storage.read(0, 11).await.unwrap()
 //! }
 //! # }
 
-#[cfg(not(any(feature = "async-std", feature = "tokio")))]
-compile_error!(
-  "Either feature `random-access-disk/async-std` or `random-access-disk/tokio` must be enabled."
-);
-
-#[cfg(all(feature = "async-std", feature = "tokio"))]
-compile_error!("features `random-access-disk/async-std` and `random-access-disk/tokio` are mutually exclusive");
-
-#[cfg(feature = "async-std")]
-use async_std::{
-  fs::{self, OpenOptions},
-  io::prelude::{SeekExt, WriteExt},
-  io::{ReadExt, SeekFrom},
+use async_lock::Mutex;
+use random_access_storage::{BoxFuture, RandomAccess, RandomAccessError};
+use std::{
+    io::SeekFrom,
+    path,
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
 };
-use random_access_storage::{RandomAccess, RandomAccessError};
-use std::ops::Drop;
-use std::path;
-
-#[cfg(feature = "tokio")]
-use std::io::SeekFrom;
-#[cfg(feature = "tokio")]
 use tokio::{
-  fs::{self, OpenOptions},
-  io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
+    fs::{self, OpenOptions},
+    io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
 };
 
 #[cfg(all(
-  feature = "sparse",
-  any(
-    target_os = "linux",
-    target_os = "android",
-    target_os = "freebsd",
-    target_os = "macos",
-  )
+    feature = "sparse",
+    any(
+        target_os = "linux",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "macos",
+    )
 ))]
 mod unix;
 #[cfg(all(
-  feature = "sparse",
-  any(
-    target_os = "linux",
-    target_os = "android",
-    target_os = "freebsd",
-    target_os = "macos",
-  )
+    feature = "sparse",
+    any(
+        target_os = "linux",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "macos",
+    )
 ))]
 use unix::{get_length_and_block_size, set_sparse, trim};
 
@@ -150,239 +125,243 @@ mod windows;
 use windows::{get_length_and_block_size, set_sparse, trim};
 
 #[cfg(not(all(
-  feature = "sparse",
-  any(
-    target_os = "linux",
-    target_os = "android",
-    target_os = "freebsd",
-    target_os = "macos",
-    windows,
-  )
+    feature = "sparse",
+    any(
+        target_os = "linux",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "macos",
+        windows,
+    )
 )))]
 mod default;
 
 #[cfg(not(all(
-  feature = "sparse",
-  any(
-    target_os = "linux",
-    target_os = "android",
-    target_os = "freebsd",
-    target_os = "macos",
-    windows,
-  )
+    feature = "sparse",
+    any(
+        target_os = "linux",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "macos",
+        windows,
+    )
 )))]
 use default::{get_length_and_block_size, set_sparse, trim};
 
-/// Main constructor.
+/// Internal mutable state of [RandomAccessDisk].
 #[derive(Debug)]
+struct DiskInner {
+    file: Option<fs::File>,
+    length: u64,
+    block_size: u64,
+    auto_sync: bool,
+}
+
+impl DiskInner {
+    async fn do_truncate(&mut self, length: u64) -> Result<(), RandomAccessError> {
+        self.length = length;
+        let auto_sync = self.auto_sync;
+        let file = self.file.as_ref().expect("self.file was None.");
+        file.set_len(length).await?;
+        if auto_sync {
+            file.sync_all().await?;
+        }
+        Ok(())
+    }
+}
+
+/// Main constructor.
+#[derive(Debug, Clone)]
 pub struct RandomAccessDisk {
-  #[allow(dead_code)]
-  filename: path::PathBuf,
-  file: Option<fs::File>,
-  length: u64,
-  block_size: u64,
-  auto_sync: bool,
+    #[allow(dead_code)]
+    filename: path::PathBuf,
+    inner: Arc<Mutex<DiskInner>>,
+    /// Cached length for synchronous reads via [`RandomAccess::len`].
+    length: Arc<AtomicU64>,
 }
 
 impl RandomAccessDisk {
-  /// Create a new (auto-sync) instance to storage at `filename`.
-  #[allow(clippy::new_ret_no_self)]
-  pub async fn open(
-    filename: impl AsRef<path::Path>,
-  ) -> Result<RandomAccessDisk, RandomAccessError> {
-    Self::builder(filename).build().await
-  }
+    /// Create a new (auto-sync) instance to storage at `filename`.
+    #[allow(clippy::new_ret_no_self)]
+    pub async fn open(
+        filename: impl AsRef<path::Path>,
+    ) -> Result<RandomAccessDisk, RandomAccessError> {
+        Self::builder(filename).build().await
+    }
 
-  /// Initialize a builder with storage at `filename`.
-  pub fn builder(filename: impl AsRef<path::Path>) -> Builder {
-    Builder::new(filename)
-  }
+    /// Initialize a builder with storage at `filename`.
+    pub fn builder(filename: impl AsRef<path::Path>) -> Builder {
+        Builder::new(filename)
+    }
 }
 
-#[async_trait::async_trait]
 impl RandomAccess for RandomAccessDisk {
-  async fn write(
-    &mut self,
-    offset: u64,
-    data: &[u8],
-  ) -> Result<(), RandomAccessError> {
-    let file = self.file.as_mut().expect("self.file was None.");
-    file.seek(SeekFrom::Start(offset)).await?;
-    file.write_all(data).await?;
-    if self.auto_sync {
-      file.sync_all().await?;
+    fn write(&self, offset: u64, data: &[u8]) -> BoxFuture<Result<(), RandomAccessError>> {
+        let inner = self.inner.clone();
+        let length_arc = Arc::clone(&self.length);
+        let data = data.to_vec();
+        Box::pin(async move {
+            let mut inner = inner.lock().await;
+            let auto_sync = inner.auto_sync;
+            let new_len = offset + (data.len() as u64);
+            {
+                let file = inner.file.as_mut().expect("self.file was None.");
+                file.seek(SeekFrom::Start(offset)).await?;
+                file.write_all(&data).await?;
+                if auto_sync {
+                    file.sync_all().await?;
+                }
+            }
+            if new_len > inner.length {
+                inner.length = new_len;
+                length_arc.store(new_len, Ordering::Relaxed);
+            }
+            Ok(())
+        })
     }
 
-    // We've changed the length of our file.
-    let new_len = offset + (data.len() as u64);
-    if new_len > self.length {
-      self.length = new_len;
+    // NOTE(yw): disabling clippy here because we files on disk might be sparse,
+    // and sometimes you might want to read a bit of memory to check if it's
+    // formatted or not. Returning zero'd out memory seems like an OK thing to do.
+    // We should probably come back to this at a future point, and determine
+    // whether it's okay to return a fully zero'd out slice. It's a bit weird,
+    // because we're replacing empty data with actual zeroes - which does not
+    // reflect the state of the world.
+    // #[cfg_attr(test, allow(unused_io_amount))]
+    fn read(&self, offset: u64, length: u64) -> BoxFuture<Result<Vec<u8>, RandomAccessError>> {
+        let inner = self.inner.clone();
+        Box::pin(async move {
+            let mut guard = inner.lock().await;
+            let stored_length = guard.length;
+            if offset + length > stored_length {
+                return Err(RandomAccessError::OutOfBounds {
+                    offset,
+                    end: Some(offset + length),
+                    length: stored_length,
+                });
+            }
+            let file = guard.file.as_mut().expect("self.file was None.");
+            let mut buffer = vec![0; length as usize];
+            file.seek(SeekFrom::Start(offset)).await?;
+            let _bytes_read = file.read(&mut buffer[..]).await?;
+            Ok(buffer)
+        })
     }
 
-    Ok(())
-  }
+    fn del(&self, offset: u64, length: u64) -> BoxFuture<Result<(), RandomAccessError>> {
+        let inner = self.inner.clone();
+        let length_arc = Arc::clone(&self.length);
+        Box::pin(async move {
+            let mut inner = inner.lock().await;
+            if offset > inner.length {
+                return Err(RandomAccessError::OutOfBounds {
+                    offset,
+                    end: None,
+                    length: inner.length,
+                });
+            };
 
-  // NOTE(yw): disabling clippy here because we files on disk might be sparse,
-  // and sometimes you might want to read a bit of memory to check if it's
-  // formatted or not. Returning zero'd out memory seems like an OK thing to do.
-  // We should probably come back to this at a future point, and determine
-  // whether it's okay to return a fully zero'd out slice. It's a bit weird,
-  // because we're replacing empty data with actual zeroes - which does not
-  // reflect the state of the world.
-  // #[cfg_attr(test, allow(unused_io_amount))]
-  async fn read(
-    &mut self,
-    offset: u64,
-    length: u64,
-  ) -> Result<Vec<u8>, RandomAccessError> {
-    if offset + length > self.length {
-      return Err(RandomAccessError::OutOfBounds {
-        offset,
-        end: Some(offset + length),
-        length: self.length,
-      });
+            if length == 0 {
+                // No-op
+                return Ok(());
+            }
+
+            // Delete is truncate if up to the current length or more is deleted
+            if offset + length >= inner.length {
+                inner.do_truncate(offset).await?;
+                length_arc.store(offset, Ordering::Relaxed);
+                return Ok(());
+            }
+
+            let auto_sync = inner.auto_sync;
+            let block_size = inner.block_size;
+            let file = inner.file.as_mut().expect("self.file was None.");
+            trim(file, offset, length, block_size).await?;
+            if auto_sync {
+                file.sync_all().await?;
+            }
+            Ok(())
+        })
     }
 
-    let file = self.file.as_mut().expect("self.file was None.");
-    let mut buffer = vec![0; length as usize];
-    file.seek(SeekFrom::Start(offset)).await?;
-    let _bytes_read = file.read(&mut buffer[..]).await?;
-    Ok(buffer)
-  }
-
-  async fn del(
-    &mut self,
-    offset: u64,
-    length: u64,
-  ) -> Result<(), RandomAccessError> {
-    if offset > self.length {
-      return Err(RandomAccessError::OutOfBounds {
-        offset,
-        end: None,
-        length: self.length,
-      });
-    };
-
-    if length == 0 {
-      // No-op
-      return Ok(());
+    fn truncate(&self, length: u64) -> BoxFuture<Result<(), RandomAccessError>> {
+        let inner = self.inner.clone();
+        let length_arc = Arc::clone(&self.length);
+        Box::pin(async move {
+            let mut inner = inner.lock().await;
+            inner.do_truncate(length).await?;
+            length_arc.store(length, Ordering::Relaxed);
+            Ok(())
+        })
     }
 
-    // Delete is truncate if up to the current length or more is deleted
-    if offset + length >= self.length {
-      return self.truncate(offset).await;
+    fn len(&self) -> u64 {
+        self.length.load(Ordering::Relaxed)
     }
 
-    let file = self.file.as_mut().expect("self.file was None.");
-    trim(file, offset, length, self.block_size).await?;
-    if self.auto_sync {
-      file.sync_all().await?;
+    fn sync_all(&self) -> BoxFuture<Result<(), RandomAccessError>> {
+        let inner = self.inner.clone();
+        Box::pin(async move {
+            let inner = inner.lock().await;
+            if !inner.auto_sync {
+                let file = inner.file.as_ref().expect("self.file was None.");
+                file.sync_all().await?;
+            }
+            Ok(())
+        })
     }
-    Ok(())
-  }
-
-  async fn truncate(&mut self, length: u64) -> Result<(), RandomAccessError> {
-    let file = self.file.as_ref().expect("self.file was None.");
-    self.length = length;
-    file.set_len(self.length).await?;
-    if self.auto_sync {
-      file.sync_all().await?;
-    }
-    Ok(())
-  }
-
-  async fn len(&mut self) -> Result<u64, RandomAccessError> {
-    Ok(self.length)
-  }
-
-  async fn is_empty(&mut self) -> Result<bool, RandomAccessError> {
-    Ok(self.length == 0)
-  }
-
-  async fn sync_all(&mut self) -> Result<(), RandomAccessError> {
-    if !self.auto_sync {
-      let file = self.file.as_ref().expect("self.file was None.");
-      file.sync_all().await?;
-    }
-    Ok(())
-  }
-}
-
-impl Drop for RandomAccessDisk {
-  fn drop(&mut self) {
-    // We need to flush the file on drop. Unfortunately, that is not possible to do in a
-    // non-blocking fashion, but our only other option here is losing data remaining in the
-    // write cache. Good task schedulers should be resilient to occasional blocking hiccups in
-    // file destructors so we don't expect this to be a common problem in practice.
-    // (from async_std::fs::File::drop)
-    #[cfg(feature = "async-std")]
-    if let Some(file) = &self.file {
-      let _ = async_std::task::block_on(file.sync_all());
-    }
-    // For tokio, the below errors with:
-    //
-    // "Cannot start a runtime from within a runtime. This happens because a function (like
-    // `block_on`) attempted to block the current thread while the thread is being used to
-    // drive asynchronous tasks."
-    //
-    // There doesn't seem to be an equivalent block_on version for tokio that actually works
-    // in a sync drop(), so for tokio, we'll need to wait for a real AsyncDrop to arrive.
-    //
-    // #[cfg(feature = "tokio")]
-    // if let Some(file) = &self.file {
-    //   tokio::runtime::Handle::current()
-    //     .block_on(file.sync_all())
-    //     .expect("Could not sync file changes on drop.");
-    // }
-  }
 }
 
 /// Builder for [RandomAccessDisk]
 pub struct Builder {
-  filename: path::PathBuf,
-  auto_sync: bool,
+    filename: path::PathBuf,
+    auto_sync: bool,
 }
 
 impl Builder {
-  /// Create new builder at `path` (with auto-sync true by default).
-  pub fn new(filename: impl AsRef<path::Path>) -> Self {
-    Self {
-      filename: filename.as_ref().into(),
-      auto_sync: true,
+    /// Create new builder at `path` (with auto-sync true by default).
+    pub fn new(filename: impl AsRef<path::Path>) -> Self {
+        Self {
+            filename: filename.as_ref().into(),
+            auto_sync: true,
+        }
     }
-  }
 
-  /// Set auto-sync
-  // NB: Because of no AsyncDrop, tokio can not ensure that changes are synced when dropped,
-  // see impl Drop above.
-  #[cfg(feature = "async-std")]
-  pub fn auto_sync(mut self, auto_sync: bool) -> Self {
-    self.auto_sync = auto_sync;
-    self
-  }
-
-  /// Build a [RandomAccessDisk] instance
-  pub async fn build(self) -> Result<RandomAccessDisk, RandomAccessError> {
-    if let Some(dirname) = self.filename.parent() {
-      mkdirp::mkdirp(dirname)?;
+    /// Set auto-sync.
+    // NB: tokio cannot flush on drop (no AsyncDrop yet), so disabling auto_sync
+    // means you must call sync_all() explicitly before the value is dropped.
+    pub fn auto_sync(mut self, auto_sync: bool) -> Self {
+        self.auto_sync = auto_sync;
+        self
     }
-    let mut file = OpenOptions::new()
-      .create(true)
-      .read(true)
-      .write(true)
-      .open(&self.filename)
-      .await?;
-    file.sync_all().await?;
 
-    set_sparse(&mut file).await?;
+    /// Build a [RandomAccessDisk] instance
+    pub async fn build(self) -> Result<RandomAccessDisk, RandomAccessError> {
+        if let Some(dirname) = self.filename.parent() {
+            mkdirp::mkdirp(dirname)?;
+        }
+        let mut file = OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .read(true)
+            .write(true)
+            .open(&self.filename)
+            .await?;
+        file.sync_all().await?;
 
-    let (length, block_size) = get_length_and_block_size(&file).await?;
-    Ok(RandomAccessDisk {
-      filename: self.filename,
-      file: Some(file),
-      length,
-      auto_sync: self.auto_sync,
-      block_size,
-    })
-  }
+        set_sparse(&mut file).await?;
+
+        let (length, block_size) = get_length_and_block_size(&file).await?;
+        let length_arc = Arc::new(AtomicU64::new(length));
+        Ok(RandomAccessDisk {
+            filename: self.filename,
+            inner: Arc::new(Mutex::new(DiskInner {
+                file: Some(file),
+                length,
+                auto_sync: self.auto_sync,
+                block_size,
+            })),
+            length: length_arc,
+        })
+    }
 }
