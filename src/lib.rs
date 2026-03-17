@@ -323,15 +323,6 @@ impl RandomAccess for RandomAccessDisk {
     }
 }
 
-impl Drop for RandomAccessDisk {
-    fn drop(&mut self) {
-        // Tokio cannot block_on inside a running runtime, so we cannot flush on
-        // drop. Changes buffered in the OS page cache will still reach disk
-        // eventually; call sync_all() explicitly before dropping if durability
-        // is required. This will be resolved when AsyncDrop stabilises.
-    }
-}
-
 /// Builder for [RandomAccessDisk]
 pub struct Builder {
     filename: path::PathBuf,
